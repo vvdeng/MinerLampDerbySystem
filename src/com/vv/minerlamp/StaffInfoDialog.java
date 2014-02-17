@@ -18,7 +18,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Blob;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.Action;
@@ -40,6 +42,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.hibernate.Hibernate;
 import org.jdesktop.swingx.JXDatePicker;
 
+import com.vv.minerlamp.comm.CommCmdObject;
 import com.vv.minerlamp.comm.SerialComm;
 import com.vv.minerlamp.dao.InfoItemDAO;
 import com.vv.minerlamp.dao.LampChangeLogDAO;
@@ -49,6 +52,8 @@ import com.vv.minerlamp.entity.InfoItem;
 import com.vv.minerlamp.entity.LampChangeLog;
 import com.vv.minerlamp.entity.LampUnit;
 import com.vv.minerlamp.entity.Staff;
+import com.vv.minerlamp.util.CommUtil;
+import com.vv.minerlamp.util.GlobalData;
 import com.vv.minerlamp.util.StaffAction;
 import com.vv.minerlamp.util.StaffState;
 import com.vv.minerlamp.util.SysConfiguration;
@@ -384,9 +389,29 @@ class StaffInfoDialog extends JDialog {
 				}
 
 				staffDAO.save(staff, state, action, manufacturer);
-				if (SerialComm.sysSerialComm.isSerialCommOk()) {
-					SerialComm.sysSerialComm.updateStaffInfo(staff);
-				}
+				CommCmdObject co=new CommCmdObject(CommCmdObject.COMM_CMD_UPDATE_STAFF);
+				List<byte[]> datList=new ArrayList<byte[]>();
+				datList.add(new byte[] { CommUtil.makeCmdAndAddr(SerialComm.CMD_UPDATE_STAFF_INFO,
+						staff.getRackId().intValue()) });
+				datList.add(CommUtil.processData(new byte[] { staff.getLampNo()
+						.byteValue() }, SerialComm.DATA_PRE__UPDATE_RACK_STAFF));
+				// co.add(new byte[] {(byte) 0xC5 });
+				
+				datList.add((CommUtil.processData(CommUtil.fillSentence(staff.getName(),// 姓名
+						CommUtil.STAFF_INFO_FIELD_LENGTN),
+						SerialComm.DATA_PRE__UPDATE_RACK_STAFF)));
+				datList.add((CommUtil.processData(
+						CommUtil.fillSentence(staff.getDepartment(),// 部门
+								CommUtil.STAFF_INFO_FIELD_LENGTN),
+								SerialComm.DATA_PRE__UPDATE_RACK_STAFF)));
+				datList.add((CommUtil.processData(
+						CommUtil.fillSentence(staff.getProfession(),// 工种
+								CommUtil.STAFF_INFO_FIELD_LENGTN),
+								SerialComm.DATA_PRE__UPDATE_RACK_STAFF)));
+				co.setDat(datList);
+				GlobalData.cmdQueue.add(co);
+				//	SerialComm.sysSerialComm.updateStaffInfo(staff);
+				
 				JOptionPane.showMessageDialog(StaffInfoDialog.this, "保存成功");
 				buttonEnabled(true);
 				

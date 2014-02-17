@@ -35,7 +35,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	private OutputStream outputStream;
 	private SerialPort serialPort;
 	private boolean isRefreshed;
-	public static int dataType;
+	public static int commState;
 	public static int state;
 	// private Thread readThread;
 	public static final int BUFFER_SIZE = 1024;
@@ -47,11 +47,13 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	public static final int SEND_ALL_LED_MESSAGES = 3;
 	public static final int UPDATE_STAFF_INFO = 4;
 	public static final int DATA_TYPE_SINGLE_UNIT_INFO = 5;
+	public static final int DATA_TYPE_REFRESH_DB = 6;
 	public static final int DATA_TYPE_UNITS_INFO_LENTTH = 101;
-	// TODO //命令号最高位更改为1 广播1000 0000 ；获取充电状态1010 00000；更新员工信息1100 0000；
+	// TODO //命令号最高位更改为1 广播1000 0000 ；获取充电状态1010 00000；更新员工信息1100 0000；开小门(byte) 0xE0;
 	public static final byte CMD_SEND_ALL_LED_MESSAGES = (byte) 0x80;// 广播LED文字信息
 	public static final byte CMD_REQ_UNIT_INFO = (byte) 0xA0;// 获取充电状态信息
 	public static final byte CMD_UPDATE_STAFF_INFO = (byte) 0xC0;// 更新员工信息
+	public static final byte CMD_OPEN_DOOR = (byte) 0xE0;// 开小门
 	public static final byte DATA_PRE_UNIT_INFO = 0x50; // 充电状态数据前缀
 	public static final byte DATA_PRE__UPDATE_RACK_STAFF = 0x60; // 更新员工信息前缀
 	public static final byte DATA_PRE__NULL = 0x00; // 空前缀
@@ -59,7 +61,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	private int index;
 	private boolean serialCommBusy;
 	private boolean serialCommNotConnected;
-	private int currentAddr = 1;
+	private int currentAddr = 0;//第一架索引从1开始，第一次调用reqNext方法后自增为1
 	private Staff currentStaff;
 	private ReplyTimeoutThread[] replyTimeoutThreads;
 
@@ -164,6 +166,11 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 			System.exit(0);
 		}
 	}
+	public void writeList(List<byte[]> bList){
+		for (byte[] bs : bList) {
+			write(bs);
+		}
+	}
 
 	public void run() {
 		// try {
@@ -202,14 +209,14 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 				while (inputStream.available() > 0) {
 					int c = inputStream.read();
 					System.out.println("c=" + c + " state=" + state + " index="
-							+ index + " dataType=" + dataType + " data=" + c);
+							+ index + " dataType=" + commState + " data=" + c);
 					if (isCmd(c)) {
 						continue;
 					}
-					if (dataType == DATA_TYPE_NOTHING) {
+					if (commState == DATA_TYPE_NOTHING) {
 						continue;
 					}
-					if (dataType == SEND_LED_MESSAGES) {
+					if (commState == SEND_LED_MESSAGES) {
 
 						buffers[index++] = (byte) c;
 
@@ -243,9 +250,29 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 							}
 							clearBuffer();
 							state = CommState.FINISHED;
-							dataType = DATA_TYPE_NOTHING;
+							commState = DATA_TYPE_NOTHING;
 						}
-					} else if (dataType == DATA_TYPE_UNITS_INFO) {
+					} else if (commState == DATA_TYPE_UNITS_INFO) {
+						// System.out.println(" curentAddr in dataTypeUnitsInfo="+currentAddr);
+				//		replyTimeoutThreads[currentAddr].setReplyed(true);
+						// if (replyTimeoutThreads[currentAddr].isAlive()) {
+						// replyTimeoutThreads[currentAddr].stop();
+						// }
+						buffers[index++] = (byte) c;
+
+						if (state == CommState.WAIT_DATA
+								&& index == DATA_TYPE_UNITS_INFO_LENTTH) {
+			//				replyTimeoutThreads[currentAddr].setFinished(true);
+//							if (replyTimeoutThreads[currentAddr].isAlive()) {
+//								replyTimeoutThreads[currentAddr].stop();
+//							}
+							state = CommState.FINISHED;//变量名需要重构
+							commState=DATA_TYPE_NOTHING;
+							setUnitsRefreshed(true);
+							// reqNextRackUnitInfo(); //改为在activity中调用
+						}
+
+					} else if (commState == DATA_TYPE_SINGLE_UNIT_INFO) {
 						// System.out.println(" curentAddr in dataTypeUnitsInfo="+currentAddr);
 						replyTimeoutThreads[currentAddr].setReplyed(true);
 						// if (replyTimeoutThreads[currentAddr].isAlive()) {
@@ -259,33 +286,13 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 							if (replyTimeoutThreads[currentAddr].isAlive()) {
 								replyTimeoutThreads[currentAddr].stop();
 							}
-							state = CommState.FINISHED;
-
+							state = CommState.FINISHED;//变量名需要重构
+							commState=DATA_TYPE_NOTHING;
 							setUnitsRefreshed(true);
 							// reqNextRackUnitInfo(); //改为在activity中调用
 						}
 
-					} else if (dataType == DATA_TYPE_SINGLE_UNIT_INFO) {
-						// System.out.println(" curentAddr in dataTypeUnitsInfo="+currentAddr);
-						replyTimeoutThreads[currentAddr].setReplyed(true);
-						// if (replyTimeoutThreads[currentAddr].isAlive()) {
-						// replyTimeoutThreads[currentAddr].stop();
-						// }
-						buffers[index++] = (byte) c;
-
-						if (state == CommState.WAIT_DATA
-								&& index == DATA_TYPE_UNITS_INFO_LENTTH) {
-							replyTimeoutThreads[currentAddr].setFinished(true);
-							if (replyTimeoutThreads[currentAddr].isAlive()) {
-								replyTimeoutThreads[currentAddr].stop();
-							}
-							state = CommState.FINISHED;
-
-							setUnitsRefreshed(true);
-							// reqNextRackUnitInfo(); //改为在activity中调用
-						}
-
-					} else if (dataType == UPDATE_STAFF_INFO) {
+					} else if (commState == UPDATE_STAFF_INFO) {
 
 					}
 
@@ -329,17 +336,21 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	public boolean reqNextRackUnitInfo() {
 		boolean finished = false;
 		if (currentAddr < SysConfiguration.rackCount) {
+			
 			currentAddr++;
+			commState = DATA_TYPE_UNITS_INFO;
 			state = CommState.WAIT_DATA;
 			write(new byte[] { (byte) makeCmdAndAddr(CMD_REQ_UNIT_INFO,
 					currentAddr) });
-			replyTimeoutThreads[currentAddr] = new ReplyTimeoutThread();
+			
 		} else {
+			currentAddr=0;
 			finished = true;
 
-			dataType = DATA_TYPE_NOTHING;
+	//		commState = DATA_TYPE_NOTHING;
+			commState = DATA_TYPE_REFRESH_DB;
 			minerLampFrame.notifyActivity();
-			;
+			
 		}
 		return finished;
 	}
@@ -373,16 +384,17 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	}
 
 	public boolean isSerialCommOk() {
-		return this.serialCommBusy == false
-				&& this.serialCommNotConnected == false
-				&& this.dataType == DATA_TYPE_NOTHING;
+		return true;
+//		return this.serialCommBusy == false
+//				&& this.serialCommNotConnected == false
+//				&& this.commState == DATA_TYPE_NOTHING;
 	}
 
 	public void reqUnitInfo() {
 		if (isSerialCommOk()) {
 
 			clearBuffer();
-			dataType = SerialComm.DATA_TYPE_UNITS_INFO;
+			commState = SerialComm.DATA_TYPE_UNITS_INFO;
 			state = CommState.WAIT_DATA;
 			currentAddr = 1;
 			write(new byte[] { makeCmdAndAddr(CMD_REQ_UNIT_INFO, currentAddr) });
@@ -395,7 +407,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 		if (isSerialCommOk()) {
 
 			clearBuffer();
-			dataType = SerialComm.DATA_TYPE_SINGLE_UNIT_INFO;
+			commState = SerialComm.DATA_TYPE_SINGLE_UNIT_INFO;
 			state = CommState.WAIT_DATA;
 			currentAddr = rackNo.intValue();
 			write(new byte[] { makeCmdAndAddr(CMD_REQ_UNIT_INFO, currentAddr) });
@@ -408,7 +420,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 		if (isSerialCommOk()) {
 			currentStaff = staff;
 			clearBuffer();
-			dataType = SerialComm.UPDATE_STAFF_INFO;
+			commState = SerialComm.UPDATE_STAFF_INFO;
 			state = CommState.ADDR;
 			System.out.println("addr=" + currentStaff.getRackId().intValue());
 			write(new byte[] { makeCmdAndAddr(CMD_UPDATE_STAFF_INFO,
@@ -429,7 +441,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 							CommUtil.STAFF_INFO_FIELD_LENGTN),
 					DATA_PRE__UPDATE_RACK_STAFF)));
 			state = CommState.FINISHED;
-			dataType = SerialComm.DATA_TYPE_NOTHING;
+			commState = SerialComm.DATA_TYPE_NOTHING;
 		}
 	}
 
@@ -439,7 +451,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 			CommUtil.ledSettingList = ledSettingList;
 			CommUtil.messageInteval = messageInteval;
 			clearBuffer();
-			dataType = SerialComm.SEND_LED_MESSAGES;
+			commState = SerialComm.SEND_LED_MESSAGES;
 			state = CommState.ADDR;
 			currentAddr = 1;
 			write(new byte[] { makeCmdAndAddr(CMD_REQ_UNIT_INFO, currentAddr) });
@@ -454,7 +466,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 			CommUtil.ledSettingList = ledSettingList;
 			CommUtil.messageInteval = messageInteval;
 			// clearBuffer();
-			dataType = SerialComm.SEND_ALL_LED_MESSAGES;
+			commState = SerialComm.SEND_ALL_LED_MESSAGES;
 
 			write(new byte[] { CMD_SEND_ALL_LED_MESSAGES });// 广播命令号
 			write(new byte[] { 1, 3, 5 });// 需重构 1,3,5 (广播标志位)
@@ -472,7 +484,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 							CommUtil.SENTENCE_LENGTH), DATA_PRE__NULL)));
 				}
 			}
-			dataType = SerialComm.DATA_TYPE_NOTHING;
+			commState = SerialComm.DATA_TYPE_NOTHING;
 		}
 	}
 
@@ -500,10 +512,10 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 				} else {
 					System.out.println("rack" + currentAddr
 							+ " reply timeout...");
-					if (dataType == DATA_TYPE_UNITS_INFO) {
+					if (commState == DATA_TYPE_UNITS_INFO) {
 						reqNextRackUnitInfo();
-					} else if (dataType == DATA_TYPE_SINGLE_UNIT_INFO) {
-						dataType = DATA_TYPE_NOTHING;
+					} else if (commState == DATA_TYPE_SINGLE_UNIT_INFO) {
+						commState = DATA_TYPE_NOTHING;
 					}
 				}
 			} catch (InterruptedException e) {

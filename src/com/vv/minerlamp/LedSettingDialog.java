@@ -20,10 +20,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import com.vv.minerlamp.comm.CommCmdObject;
 import com.vv.minerlamp.comm.SerialComm;
 import com.vv.minerlamp.dao.LedSettingDAO;
 import com.vv.minerlamp.entity.LedSetting;
 import com.vv.minerlamp.util.CommUtil;
+import com.vv.minerlamp.util.GlobalData;
 import com.vv.minerlamp.util.PropertiesUtil;
 import com.vv.minerlamp.util.SysConfiguration;
 import com.vv.minerlamp.util.Util;
@@ -125,10 +127,9 @@ class LedSettingDialog extends JDialog {
 									SysConfiguration.FILE_PATH,
 									"ledContentChangeTime",
 									ledContentChangeTime.toString());
-							if (SerialComm.sysSerialComm.isSerialCommOk()) {
-								SerialComm.sysSerialComm.sendAllLedMessages(
-										messageList, ledContentChangeTime);
-							}
+							CommCmdObject co=new CommCmdObject(CommCmdObject.COMM_CMD_BRORAD_MSG);
+							co.setDat(CommUtil.getAllLedMessagesBytes(messageList, ledContentChangeTime));
+							GlobalData.cmdQueue.add(co);
 							JOptionPane.showMessageDialog(
 									LedSettingDialog.this, "±£´æ³É¹¦");
 							dispose();

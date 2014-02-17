@@ -53,11 +53,14 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.plaf.basic.BasicTreeUI;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
@@ -66,6 +69,7 @@ import org.jdesktop.swingx.StackLayout;
 import org.pushingpixels.substance.api.SubstanceLookAndFeel;
 import org.pushingpixels.substance.api.skin.CremeSkin;
 
+import com.vv.minerlamp.comm.CommCmdObject;
 import com.vv.minerlamp.comm.SerialComm;
 import com.vv.minerlamp.dao.ChargingLogDAO;
 import com.vv.minerlamp.dao.InfoItemDAO;
@@ -79,6 +83,8 @@ import com.vv.minerlamp.entity.LampUnit;
 import com.vv.minerlamp.entity.RackStatistics;
 import com.vv.minerlamp.entity.Staff;
 import com.vv.minerlamp.entity.User;
+import com.vv.minerlamp.util.CommUtil;
+import com.vv.minerlamp.util.GlobalData;
 import com.vv.minerlamp.util.StaffAction;
 import com.vv.minerlamp.util.StaffState;
 import com.vv.minerlamp.util.SysConfiguration;
@@ -88,7 +94,7 @@ import com.vv.minerlamp.util.Util;
 public class MinerLampFrame extends JFrame {
 	public MinerLampFrame() {
 		init();
-		setTitle("矿灯充电架智能管理系统");
+		setTitle("矿灯充电架智能管理系统---开发者测试版");
 		setIconImage(SysConfiguration.sysIcon);
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		Rectangle bounds = new Rectangle(screenSize);
@@ -146,7 +152,7 @@ public class MinerLampFrame extends JFrame {
 				showDataBackUpDialog();
 			}
 		};
-	
+
 		Action lampStateAction = new ToolAction("使用状态", new ImageIcon(
 				"resources/3-0.png"), ToolActionContants.DATA_BACKUP) {
 			@Override
@@ -218,7 +224,7 @@ public class MinerLampFrame extends JFrame {
 		bar.setOpaque(true);
 		bar.add(loginButton);
 		bar.add(logoutButton);
-	//	bar.add(dataBackupButton);
+		// bar.add(dataBackupButton);
 		bar.add(lampStateButton);
 		bar.add(checkinginQueryButton);
 		bar.add(lampStatisticsButton);
@@ -365,7 +371,7 @@ public class MinerLampFrame extends JFrame {
 		menuBar.add(helpMenu);
 
 		setJMenuBar(menuBar);
-
+		addRackBtn = new JButton("增加充电架数");//提前至次数，为调用toolbarAndMenuEnabled(false);
 		toolbarAndMenuEnabled(false);
 		if (SerialComm.sysSerialComm.isSerialCommOk()) {
 			commStateLabel = new BlueJLabel("串口通信正常");
@@ -416,15 +422,33 @@ public class MinerLampFrame extends JFrame {
 		add(statePanel, BorderLayout.SOUTH);
 
 		leftPanel = new JPanel();
+
 		leftPanel.setLayout(new GridBagLayout());
 		rackPanel = new JPanel();
+		rackPanel.setBorder(BorderFactory.createEtchedBorder());
 		rackPanel.setLayout(new BorderLayout());
 		rackPanel.add(new BlueJLabel("充电架"), BorderLayout.NORTH);
 		JScrollPane rackScrollPane = new JScrollPane(makeRackTree());
 		rackPanel.add(rackScrollPane, BorderLayout.CENTER);
+		JPanel rackBtnPanel = new JPanel();
+		rackBtnPanel.setPreferredSize(new Dimension(100, 30));
+		
+		addRackBtn.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				AddRackDialog addRackDialog = new AddRackDialog(
+						MinerLampFrame.this);
+				addRackDialog.setVisible(true);
+			}
+		});
+		rackBtnPanel.add(addRackBtn);
+		rackPanel.add(rackBtnPanel, BorderLayout.SOUTH);
 
 		// 统计信息
 		statisticPane = new JPanel();
+		statisticPane.setBorder(BorderFactory.createEtchedBorder());
 		statisticPane.setLayout(new BorderLayout());
 		JLabel statisticsTitleLabel = new BlueJLabel("  统计信息");
 
@@ -489,7 +513,7 @@ public class MinerLampFrame extends JFrame {
 		mainPanel.addTab("考勤信息查询与统计", new CheckingInPanel());
 		mainPanel.addTab("下井人员信息", new UnderGroundStaffInfoPanel());
 		mainPanel.addTab("未按时上井人员实时信息", new TimeoutInfoPanel());
-	//	mainPanel.addTab("串口调试", new CommDebugPanel());
+		// mainPanel.addTab("串口调试", new CommDebugPanel());
 
 		rightPanel.add(mainPanel, new GBC(0, 0)
 				.setFill(GridBagConstraints.BOTH).setWeight(100, 100));
@@ -553,10 +577,30 @@ public class MinerLampFrame extends JFrame {
 
 		setVisible(true);
 		splitPane1.setDividerLocation(0.20);
+		Timer commTimer = new Timer(2000, new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (SerialComm.sysSerialComm.commState != SerialComm.DATA_TYPE_NOTHING) {
+
+				}
+				if (!GlobalData.cmdQueue.isEmpty()) {
+					CommCmdObject co = GlobalData.cmdQueue.poll();
+					if (co != null) {
+						SerialComm.sysSerialComm.writeList(co.getDat());
+					}
+
+				} else {
+					SerialComm.sysSerialComm.reqNextRackUnitInfo();
+				}
+
+			}
+		});
+
 		backgroundActivity = new BackgroundActivity();
 		backgroundActivity.execute();
-
-		postFrameShow();
+		commTimer.start();
+		// postFrameShow();
 	}
 
 	private void init() {
@@ -576,7 +620,7 @@ public class MinerLampFrame extends JFrame {
 			setCommBusy(true);
 			SerialComm.sysSerialComm.reqUnitInfo();
 		}
-//		int delay = 500 * 60; // milliseconds
+		// int delay = 500 * 60; // milliseconds
 		ActionListener taskPerformer = new ActionListener() {
 			public void actionPerformed(ActionEvent evt) {
 				if (SerialComm.sysSerialComm.isSerialCommOk()) {
@@ -681,15 +725,20 @@ public class MinerLampFrame extends JFrame {
 
 	public JTree makeRackTree() {
 
-		List<LampRack> lampRackList = lampRackDAO.getAll();
-		// List nodeList = new ArrayList();
-		// for (LampRack lampRack : lampRackList) {
-		// DefaultMutableTreeNode node = new DefaultMutableTreeNode(
-		// lampRack);
-		// nodeList.add(node);
-		// }
-
-		rackTree = new JTree(lampRackList.toArray());
+		final List<LampRack> lampRackList = lampRackDAO.getAll();
+		
+//		List nodeList = new ArrayList();
+//		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode();
+//		for (LampRack lampRack : lampRackList) {
+//			DefaultMutableTreeNode node = new DefaultMutableTreeNode(lampRack);
+//			nodeList.add(node);
+//			rootNode.add(node);
+//		}
+//
+//		rackTreeModel = new DefaultTreeModel(rootNode);
+//
+//		rackTree = new JTree(rackTreeModel);
+		 rackTree = new JTree(lampRackList.toArray());
 		rackTree.setRowHeight(20);
 		rackTree.setCellRenderer(new DefaultTreeCellRenderer() {
 			public Component getTreeCellRendererComponent(JTree tree,
@@ -729,6 +778,22 @@ public class MinerLampFrame extends JFrame {
 		});
 
 		return rackTree;
+
+	}
+
+	public void refreshLampRackTree() {
+		/*
+		 * final List<LampRack> lampRackList = lampRackDAO.getAll(); List
+		 * nodeList = new ArrayList(); DefaultMutableTreeNode rootNode = new
+		 * DefaultMutableTreeNode(); for (LampRack lampRack : lampRackList) {
+		 * DefaultMutableTreeNode node = new DefaultMutableTreeNode(lampRack);
+		 * nodeList.add(node); rootNode.add(node); }
+		 * 
+		 * rackTreeModel = new DefaultTreeModel(rootNode);
+		 * 
+		 * rackTree = new JTree(rackTreeModel); rackTreeModel.reload();
+		 * SwingUtilities.updateComponentTreeUI(rackTree);
+		 */
 
 	}
 
@@ -852,6 +917,7 @@ public class MinerLampFrame extends JFrame {
 			staffMenu.setEnabled(true);
 			alarmMenu.setEnabled(true);
 			helpMenu.setEnabled(true);
+			addRackBtn.setEnabled(true);
 		} else {
 
 			loginButton.setVisible(true);
@@ -869,6 +935,7 @@ public class MinerLampFrame extends JFrame {
 			staffMenu.setEnabled(false);
 			alarmMenu.setEnabled(false);
 			helpMenu.setEnabled(false);
+			addRackBtn.setEnabled(false);
 		}
 	}
 
@@ -1095,8 +1162,8 @@ public class MinerLampFrame extends JFrame {
 			rackStatePanel.add(fullUnitLabel, new GBC(5, 1).setWeight(0, 0));
 			rackStatePanel.add(refreshRackButton, new GBC(7, 1).setWeight(0, 0)
 					.setInsets(0, 20, 0, 0));
-		//	rackStatePanel.add(refreshAllRackButton,
-		//			new GBC(6, 1).setWeight(0, 0).setInsets(0, 20, 0, 0));
+			// rackStatePanel.add(refreshAllRackButton,
+			// new GBC(6, 1).setWeight(0, 0).setInsets(0, 20, 0, 0));
 
 			rackStatePanel.add(figurePanel, new GBC(8, 0,
 					GridBagConstraints.REMAINDER, GridBagConstraints.REMAINDER)
@@ -1500,13 +1567,19 @@ public class MinerLampFrame extends JFrame {
 
 			lampNoTxt = new JTextField();
 			lampNoTxt.setPreferredSize(new Dimension(100, 20));
-			workTypeCombo = new JComboBox(infoItemDAO.qeueryByType(
-					InfoItem.WORK_TYPE_ITEM).toArray());
+			List comboItemList = infoItemDAO
+					.qeueryByType(InfoItem.WORK_TYPE_ITEM);
+			comboItemList.add(0, "请选择");
+			workTypeCombo = new JComboBox(comboItemList.toArray());
 			workTypeCombo.setPreferredSize(new Dimension(100, 20));
-			departmentCombo = new JComboBox(infoItemDAO.qeueryByType(
-					InfoItem.DEPARTMENT_ITEM).toArray());
+			comboItemList = infoItemDAO.qeueryByType(InfoItem.DEPARTMENT_ITEM);
+			comboItemList.add(0, "请选择");
+			departmentCombo = new JComboBox(comboItemList.toArray());
 			departmentCombo.setPreferredSize(new Dimension(100, 20));
-			rackIdCombo = new JComboBox(Util.makeArray(20L).toArray());
+			comboItemList = Util
+					.makeArray(new Long(SysConfiguration.rackCount));
+			comboItemList.add(0, "请选择");
+			rackIdCombo = new JComboBox(comboItemList.toArray());
 			rackIdCombo.setPreferredSize(new Dimension(100, 20));
 			queryPanel.add(workIdTxt, new GBC(1, 0).setWeight(0, 0));
 			queryPanel.add(nameTxt, new GBC(3, 0).setWeight(0, 0));
@@ -1696,6 +1769,30 @@ public class MinerLampFrame extends JFrame {
 				}
 			};
 			add(delAction);
+			lockAction = new ButtonAction("开锁", null) {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					int selection = JOptionPane.showConfirmDialog(
+							MinerLampFrame.this, "确定要开锁吗", "提示",
+							JOptionPane.YES_NO_OPTION);
+					if (selection == JOptionPane.YES_OPTION) {
+
+						CommCmdObject co = new CommCmdObject(
+								CommCmdObject.COMM_CMD_OPEN_DOOR);
+						List<byte[]> datList = new ArrayList<byte[]>();
+						datList.add(new byte[] { CommUtil.makeCmdAndAddr(
+								SerialComm.CMD_OPEN_DOOR, rackId.intValue()) });
+						datList.add(new byte[] { lampNo.byteValue() });
+						co.setDat(datList);
+						GlobalData.cmdQueue.add(co);
+						JOptionPane.showMessageDialog(MinerLampFrame.this,
+								"锁已打开", "提示", JOptionPane.INFORMATION_MESSAGE);
+
+					}
+
+				}
+			};
+			add(lockAction);
 			addSeparator();
 			settingAction = new ButtonAction("矿灯使用设置", null) {
 
@@ -1933,6 +2030,7 @@ public class MinerLampFrame extends JFrame {
 		private Action editAction;
 		private Action addAction;
 		private Action delAction;
+		private Action lockAction;
 		private Action settingAction;
 		private Action simuUndergroundAction;
 		private Action simuChargingAction;
@@ -2006,9 +2104,9 @@ public class MinerLampFrame extends JFrame {
 						System.out
 								.println("-----------------------------------------------------------------------------------------");
 						publish(0);
-
+						SerialComm.sysSerialComm.commState = SerialComm.DATA_TYPE_NOTHING;// 暂且放在此处
 					} else {
-						if (SerialComm.sysSerialComm.dataType == SerialComm.DATA_TYPE_NOTHING) {
+						if (SerialComm.sysSerialComm.commState == SerialComm.DATA_TYPE_NOTHING) {
 							publish(1);
 						}
 					}
@@ -2023,11 +2121,11 @@ public class MinerLampFrame extends JFrame {
 				case 0:
 					refreshLampUnitsWithSelectRack(false);
 					refreshRackStatisticsLabelContent();
-					if (SerialComm.dataType == SerialComm.DATA_TYPE_UNITS_INFO) {
+					if (SerialComm.commState == SerialComm.DATA_TYPE_UNITS_INFO) {
 						SerialComm.sysSerialComm.reqNextRackUnitInfo();
-					} else if (SerialComm.dataType == SerialComm.DATA_TYPE_SINGLE_UNIT_INFO) {
+					} else if (SerialComm.commState == SerialComm.DATA_TYPE_SINGLE_UNIT_INFO) {
 						{
-							SerialComm.dataType = SerialComm.DATA_TYPE_NOTHING;
+							SerialComm.commState = SerialComm.DATA_TYPE_NOTHING;
 							setCommBusy(false);
 						}
 					}
@@ -2072,6 +2170,7 @@ public class MinerLampFrame extends JFrame {
 	private JPanel beforeLoginPanel;
 	private JPanel rackPanel;// 充电架
 	private JTree rackTree;
+	private DefaultTreeModel rackTreeModel;
 	private JPanel statisticPane;// 统计信息
 	private JTabbedPane mainPanel;// 内容区
 	private UnitsPanel unitsPanel;
@@ -2107,6 +2206,7 @@ public class MinerLampFrame extends JFrame {
 	private JLabel sysStateLabel;
 
 	private BackgroundActivity backgroundActivity;
+	private JButton addRackBtn;
 
 	public void setCommStateLableText(String text) {
 		commStateLabel.setText(text);

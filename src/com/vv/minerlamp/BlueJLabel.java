@@ -10,7 +10,7 @@ import javax.swing.JLabel;
 public class BlueJLabel extends JLabel{
 	public BlueJLabel(String title){
 		super(title);
-		setBorder(BorderFactory.createEtchedBorder());
+	//	setBorder(BorderFactory.createEtchedBorder());
 		setFont(new Font("TimesRoman", Font.BOLD, 12));
 		setOpaque(true);
 		setBackground(new Color(182, 230, 247));

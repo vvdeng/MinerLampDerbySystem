@@ -47,9 +47,11 @@ class LampStatisticsDialog extends JDialog {
 		final JTable statisticsTable = new JTable();
 		// statisticsTable.setCellEditor(TableUtil.getCellEditor());
 		final JTable recordTable = new JTable();
+		final JTable overLimitsTable=new JTable();
 		// recordTable.setCellEditor(TableUtil.getCellEditor());
 		tabbedPane.addTab("矿灯使用统计", new JScrollPane(statisticsTable));
 		tabbedPane.addTab("矿灯更换记录", new JScrollPane(recordTable));
+		tabbedPane.addTab("矿灯超限统计", new JScrollPane(overLimitsTable));
 		tabbedPane.setSelectedIndex(selectedTabNo);
 		JButton exit = new JButton("退出");
 		exit.addActionListener(new ActionListener() {
@@ -70,12 +72,17 @@ class LampStatisticsDialog extends JDialog {
 			public void actionPerformed(ActionEvent e) {
 				if (tabbedPane.getSelectedIndex() == 0) {
 					statisticsTable.setModel(TableUtil.getModel(
-							lampUnitDAO.listAllForModel(),
+							lampUnitDAO.listAllForModel(false),
 							statisticsColumnNames));
-				} else {
+				} else if (tabbedPane.getSelectedIndex() == 1)  {
 					recordTable.setModel(TableUtil.getModel(
 							lampChangeLogDAO.listAllforModel(),
 							recordColumnNames));
+				}
+				else if (tabbedPane.getSelectedIndex() == 2)  {
+					overLimitsTable.setModel(TableUtil.getModel(
+							lampUnitDAO.listAllForModel(true),
+							statisticsColumnNames));
 				}
 			}
 		}));
@@ -87,9 +94,13 @@ class LampStatisticsDialog extends JDialog {
 					Util.createExcelFile(TableUtil.LAMP_USE_FILENAME,
 							TableUtil.LAMP_USE_TITLE,
 							statisticsTable.getModel());
-				} else {
+				} else if (tabbedPane.getSelectedIndex() == 1){
 					Util.createExcelFile(TableUtil.LAMP_CHANGE_FILENAME,
 							TableUtil.LAMP_CHANGE_TITLE, recordTable.getModel());
+				}
+				else if (tabbedPane.getSelectedIndex() == 2){
+					Util.createExcelFile(TableUtil.LAMP_OVER_LIMIT_FILENAME,
+							TableUtil.LAMP_OVER_LIMIT_TITLE, overLimitsTable.getModel());
 				}
 
 			}

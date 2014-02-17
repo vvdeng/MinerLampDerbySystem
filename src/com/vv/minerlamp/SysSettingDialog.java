@@ -73,8 +73,8 @@ public class SysSettingDialog extends JDialog {
 		List nodeList = new ArrayList();
 		DefaultMutableTreeNode commNode = new DefaultMutableTreeNode("串口通信设置");
 		nodeList.add(commNode);
-		DefaultMutableTreeNode dbNode = new DefaultMutableTreeNode("数据库设置");
-		nodeList.add(dbNode);
+	//	DefaultMutableTreeNode dbNode = new DefaultMutableTreeNode("数据库设置");
+	//	nodeList.add(dbNode);
 		DefaultMutableTreeNode rackNode = new DefaultMutableTreeNode("充电架设置");
 		nodeList.add(rackNode);
 		DefaultMutableTreeNode userNode = new DefaultMutableTreeNode("用户设置");
@@ -113,7 +113,7 @@ public class SysSettingDialog extends JDialog {
 		final JPanel timeoutPanel = new TimeoutPanel();
 		timeoutPanel.setVisible(false);
 		rightPanel.add(commPanel, StackLayout.TOP);
-		rightPanel.add(dbPanel, StackLayout.TOP);
+	//	rightPanel.add(dbPanel, StackLayout.TOP);
 		rightPanel.add(rackPanel, StackLayout.TOP);
 		rightPanel.add(userPanel, StackLayout.TOP);
 		rightPanel.add(usePanel, StackLayout.TOP);
@@ -759,12 +759,15 @@ public class SysSettingDialog extends JDialog {
 			panel.add(new JLabel("小时"), new GBC(2, 2).setWeight(0, 0)
 					.setInsets(5, 0, 0, 0));
 			ButtonGroup buttonGroup = new ButtonGroup();
+			
 			countLimitRadioButton = new JRadioButton("限制使用次数");
+			countLimitRadioButton.setEnabled(false);
 			countLimitRadioButton
 					.setSelected(SysConfiguration.isCountLimited == 0);
 			buttonGroup.add(countLimitRadioButton);
 
 			timeLimitRadioButton = new JRadioButton("限制使用时长");
+			timeLimitRadioButton.setEnabled(false);
 			timeLimitRadioButton
 					.setSelected(SysConfiguration.isCountLimited == 1);
 			buttonGroup.add(timeLimitRadioButton);
@@ -775,6 +778,7 @@ public class SysSettingDialog extends JDialog {
 			countLimitTxt.setPreferredSize(new Dimension(150, 20));
 			timeLimitTxt = new JFormattedTextField(
 					Util.getIntegerNumberFormat());
+			timeLimitTxt.setEnabled(false);
 			timeLimitTxt.setValue(SysConfiguration.limitTime);
 			timeLimitTxt.setPreferredSize(new Dimension(150, 20));
 

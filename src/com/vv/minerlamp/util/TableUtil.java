@@ -27,8 +27,10 @@ public class TableUtil {
 	public static final String ALARM_TITLE="超时告警信息";
 	public static final String LAMP_USE_FILENAME="矿灯使用统计";
 	public static final String LAMP_USE_TITLE="矿灯使用统计";
+	public static final String LAMP_OVER_LIMIT_FILENAME="矿灯超限统计";
 	public static final String LAMP_CHANGE_FILENAME="矿灯更换记录";
 	public static final String LAMP_CHANGE_TITLE="矿灯更换记录";
+	public static final String LAMP_OVER_LIMIT_TITLE="矿灯超限记录";
 	public static TableModel getModel(final List list,
 			final String columnNames[]) {
 

@@ -14,6 +14,8 @@ import javax.imageio.ImageIO;
 import com.vv.minerlamp.entity.RackStatistics;
 
 public class SysConfiguration {
+	public static final int COUNT_LIMIT=0;
+	public static final int TIME_LIMIT=1;
 	public static final String FILE_PATH = "init.properties";
 	public static final String DBCONFIG_FILE_PATH = "db.properties";
 	public static final int SYS_STATE_RUNNING = 1;

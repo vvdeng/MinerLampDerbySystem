@@ -17,6 +17,7 @@ import com.vv.minerlamp.entity.RackStatistics;
 import com.vv.minerlamp.util.HibernateUtil;
 import com.vv.minerlamp.util.StaffAction;
 import com.vv.minerlamp.util.StaffState;
+import com.vv.minerlamp.util.SysConfiguration;
 
 public class LampUnitDAO {
 
@@ -29,14 +30,20 @@ public class LampUnitDAO {
 		return list;
 	}
 
-	public List<LampUnit> listAllForModel() {
+	public List<LampUnit> listAllForModel(boolean useLimit) {
 		List<LampUnit> list = new ArrayList<LampUnit>();
 		Session session = HibernateUtil.getSessionFactory().openSession();
-		;
-		list = session
-				.createQuery(
-						"select unit.rackId,unit.lampNo,unit.chargingCounts,unit.chargingBeginTime,unit.manufacturer from LampUnit as unit")
-				.list();
+		String hql = "select unit.rackId,unit.lampNo,unit.chargingCounts,unit.chargingBeginTime,unit.manufacturer from LampUnit as unit ";
+		if (useLimit == true) {
+			if(SysConfiguration.isCountLimited==SysConfiguration.COUNT_LIMIT){
+				hql+=" where unit.chargingCounts>="+SysConfiguration.limitCount;
+			}
+			else {
+				//TODO充电时间累计超时
+				
+			}
+		}
+		list = session.createQuery(hql).list();
 		return list;
 	}
 
@@ -54,7 +61,7 @@ public class LampUnitDAO {
 					lampUnit.setLampNo(new Long(j));
 					lampUnit.setName("" + i + "-" + j);
 					lampUnit.setState(StaffState.STAFF_UNDEFINED);
-					
+
 					session.save(lampUnit);
 				}
 			}
@@ -87,7 +94,28 @@ public class LampUnitDAO {
 		}
 
 	}
+	public void batchAddSaveInCurrentSession(Long maxRackId,int addRackCount, int unitCount,
+			Session session) {
+		int lastRackId=0;
+		if(maxRackId!=null){
+			lastRackId=maxRackId.intValue();
+		}
+		
+		for (int i = lastRackId+1; i <= lastRackId+addRackCount; i++) {
+			for (int j = 1; j <= unitCount; j++) {
+				LampUnit lampUnit = new LampUnit();
+				lampUnit.setRackId(new Long(i));
+				lampUnit.setLampNo(new Long(j));
+				lampUnit.setName("" + i + "-" + j);
+				lampUnit.setState(StaffState.STAFF_UNDEFINED);
+				lampUnit.setChargingCounts(0);
+				// lampUnit.setChargingBeginTime(new Date());
+				// lampUnit.setChargingLastTime(new Date());
+				session.save(lampUnit);
+			}
+		}
 
+	}
 	public void changeLamp(Long rackId, Long lampNo, int chargingCounts,
 			Date chargingBeginTime) {
 		Session session = HibernateUtil.getSessionFactory().openSession();
@@ -219,7 +247,8 @@ public class LampUnitDAO {
 					if (rackId.equals(statistics[0])) {
 						rackStatistics.setIdleCount((Long) (statistics[2]));
 					}
-				} else if (statistics[1].equals(StaffState.STAFF_UNDERGROUND)||statistics[1].equals(StaffState.STAFF_DEFINED)) {
+				} else if (statistics[1].equals(StaffState.STAFF_UNDERGROUND)
+						|| statistics[1].equals(StaffState.STAFF_DEFINED)) {
 					totalRackStatistics
 							.addUndergroundCount((Long) (statistics[2]));
 					if (rackId.equals(statistics[0])) {
