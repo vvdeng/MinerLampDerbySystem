@@ -1,0 +1,121 @@
+C51 COMPILER V9.01   HANZI                                                                 01/18/2014 17:49:22 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE HANZI
+OBJECT MODULE PLACED IN hanzi.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE hanzi.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "hanzi.h"
+   2          //---------------------------------------------------------
+   3          //函数名称：u8 GB_HZZF_len(u8 *hzStr)
+   4          //说明：    由汉字内码计算汉字内码占用的字节数
+   5          //参数说明：hzStr 汉字内码指针
+   6          //返回：        获得内码所占用的字节数
+   7          //---------------------------------------------------------
+   8          //---------------------------------------------------------
+   9          u8 GB_HZZF_len(u8 *hzStr)//获得GB汉字所占用的字节数
+  10          {
+  11   1              u8 c1,c2;
+  12   1              c1 = *hzStr++;
+  13   1              if( c1 < 0x20 )
+  14   1                      return(0);
+  15   1              if( c1 < 0x80)
+  16   1                      return(1);
+  17   1              c2= *hzStr++;
+  18   1              if( (c1==0x81 && c2>=0x39)||(c1==0x82) )
+  19   1                      return(4);
+  20   1              return(2);
+  21   1      
+  22   1      }
+  23          //----------------------------------------------------------
+  24          //----------------------------------------------------------
+  25          //函数名称：u32  GB_ADDR(u8 *HZ,u8 HZ_type)
+  26          //说明：    由汉字内码计算汉字地址
+  27          //参数说明：
+  28          //                      HZ_type  支持8点，12点，16点，24点，32点汉字
+  29          //                      HZ       内码可以是单字节，双字节，四字节
+  30          //                      BaseAddr 该类型的点阵的起始地址
+  31          //返回：        汉字点阵在字库中的绝对地址
+  32          //----------------------------------------------------------
+  33          u32  GB_ADDR(u8 *HZ,u8 HZ_type)//获得汉字点阵的地址
+  34          {
+  35   1              u32 temp;
+  36   1              u8 c1,c2;
+  37   1              if(HZ[0]<0x80)//ASCII ,半角
+  38   1              {
+  39   2      
+  40   2                  if( HZ[0] < ' ' )
+  41   2                                      HZ[0] = ' ';
+  42   2                              temp = HZ[0] - ' ';
+  43   2                              if( HZ_type == TYPE_8 )
+  44   2                                      temp = temp*8 +  ASC0808YZF_ADDR;
+  45   2                              else if( HZ_type == TYPE_12 )
+  46   2                                      temp = temp*12 + ASC0812YZF_ADDR;
+  47   2                              else if( HZ_type == TYPE_16 )
+  48   2                                      temp = temp*16 + ASC0816YZF_ADDR;
+  49   2                              else if( HZ_type == TYPE_24 )
+  50   2                                      temp = temp*48 + ASC1224YZF_ADDR;
+  51   2                              else if( HZ_type == TYPE_32 )
+  52   2                                      temp = temp*64 + ASC1632YZF_ADDR;
+  53   2      
+  54   2              }
+  55   1          else //chinese  for BG2312,GBK,GB18030,GB12345
+C51 COMPILER V9.01   HANZI                                                                 01/18/2014 17:49:22 PAGE 2   
+
+  56   1          {
+  57   2                      c1=HZ[0];
+  58   2                      c2=HZ[1];
+  59   2                      //符号区,全角 846+96 = 1038
+  60   2                      if( (c1>=0xA1 && c1 <= 0xAB && c2>=0xa1)||(c1>=0xa8 && c1 <= 0xa9 && c2<0xa1) )
+  61   2                      {
+  62   3                      if( c1>=0xA1 && c1 <= 0xAB && c2>=0xa1 )//双字节字符1区 846
+  63   3                                              temp = (c1 - 0xA1) * 94 + (c2 - 0xA1);
+  64   3                                      else                                                                    //双字节字符5区 96
+  65   3                                              {if(c2>0x7f) c2--;temp=(c1-0xa8)*96 +(c2-0x40)+846;}
+  66   3      
+  67   3                      if( HZ_type == TYPE_12 )
+  68   3                                              return( temp *24 + ZF1212Y_ADDR);
+  69   3                                      else if( HZ_type == TYPE_16 )
+  70   3                                              return( temp *32 + ZF1616Y_ADDR);
+  71   3                                      else if( HZ_type == TYPE_24 )
+  72   3                                              return( temp *72 + ZF2424Y_ADDR);
+  73   3                                      else if( HZ_type == TYPE_32 )
+  74   3                                              return( temp *128 + ZF3232Y_ADDR);
+  75   3                                      else
+  76   3                                              return(0x00);
+  77   3                      }
+  78   2      
+  79   2                      //GBK双字节2区 6768
+  80   2                      else if(c1>=0xb0 && c1 <= 0xf7 && c2>=0xa1)
+  81   2                      {
+  82   3                              temp= (c1 - 0xB0) * 94 + (c2 - 0xA1);
+  83   3                      }
+  84   2                      if( HZ_type == TYPE_12 )
+  85   2                              temp = (temp+846-184)*24 + ZF1212Y_ADDR;
+  86   2                      else if( HZ_type == TYPE_16 )
+  87   2                              temp = (temp+846-184)*32 + ZF1616Y_ADDR;
+  88   2                      else if( HZ_type == TYPE_24 )
+  89   2                              temp = (temp+846-184)*72 + ZF2424Y_ADDR;
+  90   2                      else if( HZ_type == TYPE_32 )
+  91   2                              temp=(temp+846-184)*128+ZF3232Y_ADDR;
+  92   2                      else
+  93   2                              return(0x00);
+  94   2              }
+  95   1              return temp;
+  96   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    955    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      13
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

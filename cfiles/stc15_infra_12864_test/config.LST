@@ -1,0 +1,161 @@
+C51 COMPILER V9.00   CONFIG                                                                01/29/2014 23:26:41 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE CONFIG
+OBJECT MODULE PLACED IN config.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE config.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "config.h"
+   2          
+   3          
+   4          uchar digiBuf[SEG_COUNT]={0};
+   5          
+   6          uchar  irTime=0;//红外用全局变量
+   7          bit irProcessFlag=0,irReceiveFlag=0;
+   8          uchar IRcord[4]={0};
+   9          uchar irData[33];
+  10          uchar irCount=0;
+  11          uchar setState=SET_STATE_NONE;
+  12          
+  13          uchar configMenuArr[CONFIG_LEN]={CONFIG_ADDR,CONFIG_INTEVAL,CONFIG_DEBUG,CONFIG_EXIT};
+  14          uchar configArr[CONFIG_LEN]={55,44,33,0};
+  15          
+  16          
+  17          uchar  curMenuIndex=0,curSelBit=0,curSelItem=0;
+  18          void Ir_work(void)
+  19          {
+  20   1      
+  21   1              
+  22   1      }
+  23          
+  24          void Ircordpro(void)
+  25          { 
+  26   1              uchar i, j, k=1;
+  27   1              uchar cord,value;
+  28   1      
+  29   1              for(i=0;i<4;i++)      //处理4个字节
+  30   1              {
+  31   2                      for(j=1;j<=8;j++) //处理1个字节8位
+  32   2                      {
+  33   3                              cord=irData[k];
+  34   3              //              if(cord>7)//大于某值为1，这里为7，与晶振有关，这个值需要具体调试          0.278*7=1.946 0.256*7=    1.792
+  35   3                              if(cord>2)       // 0.6*3=1.8
+  36   3                              {
+  37   4                                      value|=0x80;
+  38   4                              }
+  39   3                              if(j<8)
+  40   3                              {
+  41   4                                      value>>=1;
+  42   4                              }
+  43   3                              k++;
+  44   3                      }
+  45   2                      IRcord[i]=value;
+  46   2                      value=0;     
+  47   2              } 
+  48   1      }
+  49          
+  50          
+  51          void saveConfig(){
+  52   1              uchar m;
+  53   1              for(m=0;m<CONFIG_LEN-1;m++){      //最后一项为退出选项，无需保存至rom
+  54   2                      IapProgramByte(CONFIG_ROM_ADDR+m,configArr[m]);
+  55   2                      configArr[m]= IapReadByte(CONFIG_ROM_ADDR+m);
+C51 COMPILER V9.00   CONFIG                                                                01/29/2014 23:26:41 PAGE 2   
+
+  56   2              }
+  57   1      }
+  58          void retreiveConfig(){
+  59   1              uchar m;
+  60   1              for(m=0;m<CONFIG_LEN-1;m++){      //最后一项为退出选项，无需保存至rom
+  61   2              //      if(m==CONFIG_XXX){}
+  62   2                      configArr[m]= IapReadByte(CONFIG_ROM_ADDR+m);
+  63   2                      if(configArr[m]==0xff){
+  64   3                              configArr[m]=0;
+  65   3                      }
+  66   2              }
+  67   1      }
+  68          void processSettingIfNecessary(){
+  69   1          if(irProcessFlag)                        
+  70   1                {   
+  71   2                 Ircordpro();
+  72   2                 Ir_work();
+  73   2                 irProcessFlag=0;
+  74   2                }
+  75   1      
+  76   1                 
+  77   1        
+  78   1      }
+  79          void irTime0Process(){
+  80   1              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+  81   1              TH0 = 0xFD;             //设置定时初值
+  82   1      //      TL0=0x00;
+  83   1      //      TH0=0xff;
+  84   1              if(irReceiveFlag==1)
+  85   1              {
+  86   2                      irTime++;  //用于计数2个下降沿之间的时间
+  87   2              }
+  88   1      }
+  89          void irExProcess(){
+  90   1              if(irProcessFlag==0)                      
+  91   1              {
+  92   2                      if(irReceiveFlag==1)
+  93   2                      {
+  94   3                 //   if(irTime>=33&&irTime<63){//引导码 TC9012的头码，9ms+4.5ms                0.278*33=9.174  0.278*63=17.514  0.2
+             -56*33= 8.448 0.256*63= 16.128
+  95   3                     if(irTime>=15&&irTime<28){ //  0.6*15=9 0.6*27=16.2
+  96   4                                      irCount=0;
+  97   4                              }
+  98   3                      irData[irCount]=irTime;//存储每个电平的持续时间，用于以后判断是0还是1
+  99   3                      irTime=0;
+ 100   3                      irCount++;
+ 101   3                              if(irCount==33)
+ 102   3                      {
+ 103   4                                      irReceiveFlag=0;
+ 104   4                                      irProcessFlag=1;
+ 105   4                                      irCount=0;
+ 106   4                                      ET0=0;    //关中断
+ 107   4                              TR0 = 0;                //定时器0停止计时
+ 108   4                              }
+ 109   3                      
+ 110   3                      }
+ 111   2                      else{
+ 112   3                               irReceiveFlag=1;
+ 113   3                               irTime=0;
+ 114   3                               ET0=1;    //开中断
+ 115   3                           TR0 = 1;           //定时器0开始计时
+ 116   3                      }
+C51 COMPILER V9.00   CONFIG                                                                01/29/2014 23:26:41 PAGE 3   
+
+ 117   2          }
+ 118   1      }
+ 119          void irInit(){  //未打开总中断
+ 120   1        
+ 121   1              AUXR &= 0x7F;           //定时器时钟12T模式
+ 122   1              TMOD &= 0xF0;           //设置定时器模式
+ 123   1              TMOD |= 0x01;           //设置定时器模式
+ 124   1              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+ 125   1              TH0 = 0xFD;             //设置定时初值
+ 126   1      
+ 127   1              TF0 = 0;                //清除TF0标志
+ 128   1      
+ 129   1              IT0 = 1;   //指定外部中断0下降沿触发，INT0 (P3.2)
+ 130   1              EX0 = 1;   //使能外部中断
+ 131   1       
+ 132   1      
+ 133   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    327    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     55       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

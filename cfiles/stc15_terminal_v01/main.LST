@@ -1,0 +1,940 @@
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE main.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          
+   2          #include <reg52.h>  
+   3          #include<intrins.h> 
+   4          #include "insideStorage.h"    
+   5          #include "lcd12864.h" 
+   6          #include "vvspi.h" 
+   7          #include "useful.h"        
+   8          #include "config.h"
+   9          #include "yuyin.h"
+  10          sfr IP2=0xb5;
+  11          sfr S2CON = 0x9a;               //UART2 控制寄存器
+  12          sfr S2BUF = 0x9b;               //UART2 数据寄存器
+  13          sfr T2H   = 0xd6;               //定时器2高8位
+  14          sfr T2L   = 0xd7;               //定时器2低8位
+  15          sfr IE2   = 0xaf;               //中断控制寄存器2
+  16          
+  17          #define S2RI  0x01              //S2CON.0
+  18          #define S2TI  0x02              //S2CON.1
+  19          #define S2RB8 0x04              //S2CON.2
+  20          #define S2TB8 0x08              //S2CON.3
+  21          
+  22          
+  23          
+  24          #define RS_T 1
+  25          #define RS_R 0
+  26          #define DATA_PRE 0x50 //0101 数据前导
+  27          #define DATA_PRE_UPDATE_STAFF 0x60 //0110 更新员工信息数据前导
+  28          sfr   ADC_CONTR      =   0xBC; 
+  29          sfr   ADC_RES       =   0xBD;                 
+  30          sfr   ADC_LOW2     =   0xBE;                
+  31          sfr   P1ASF         =   0x9D; 
+  32          sbit  EADC =IE^5;
+  33          #define   ADC_POWER      0x80                 
+  34          #define   ADC_FLAG      0x10                  
+  35          #define   ADC_START    0x08                 
+  36          #define   ADC_SPEEDLL   0x00                  
+  37          #define   ADC_SPEEDL     0x20                 
+  38          #define   ADC_SPEEDH     0x40                  
+  39          #define   ADC_SPEEDHH   0x60
+  40          
+  41          #define ADC_STATE_CHANNEL 3 //状态ad通道选用P1.3  
+  42          #define ADC_BRIGHT_CHANNEL 4 //光线亮度ad通道选用P1.4  
+  43          
+  44          
+  45          #define LOCAL_ADDRESS_ADDR  0x0
+  46          #define BRIGHT_THRESHOLD_ADDR  0x02
+  47          #define IS_SETTED_ADDR  0x04
+  48          #define VOLTAGE_THRESHOLD_ADDR  0x06
+  49          #define STAFF_INFO_ADDR 0x8
+  50          
+  51          
+  52          
+  53          #define FIELD_COUNT 3
+  54          #define STAFF_INFO_FIELD_LENGTN 8
+  55          //自定义命令格式：xxxd dddd  髙3位表示命令，后5位表示灯架地址
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 2   
+
+  56          #define CMD_OPEN_DOOR 0xE0
+  57          #define CMD_UPDATE_STAFF 0xC0
+  58          #define CMD_REQ_UNIT_INFO 0x80
+  59          #define COMM_STATE_NOTHING 0
+  60          #define COMM_STATE_UPDATE_STAFF 1
+  61          #define COMM_STATE_REQ_UNIT_INFO 2
+  62          #define COMM_STATE_UPDATE_STAFF_WAIT_ADDRESS 3
+  63          #define COMM_STATE_REQ_UNIT_INFO_WAIT_ADDRESS 4
+  64          #define COMM_STATE_OPEN_DOOR_WAIT_ADDRESS 5
+  65                       
+  66          #define BAT_VAL_ARR_LEN 10
+  67          
+  68          #define MENU_LEN 4
+  69          
+  70          sfr P4=0xc0;
+  71          
+  72          sfr P3M1=0xb1;
+  73          sfr P3M0=0xb2;
+  74          sfr P2M1=0x95;
+  75          sfr P2M0=0x96;
+  76          sbit ledControl=P2^7;
+  77          sbit IR=P3^2; 
+  78          //sbit ledTest=P3^4;
+  79          sbit k0=P3^5;
+  80          //串口2 485读写控制
+  81          sbit RS_485_2=P2^0;
+  82          //按键
+  83          /*sbit k1=P1^4;
+  84          sbit k3=P1^5;
+  85          sbit k5=P1^6;
+  86          sbit k7=P1^7;*/
+  87          
+  88          sbit LED_TXD=P4^2;//2;
+  89          sbit LED_RXD=P4^4;//4;
+  90          sbit isLedDisplay=P2^7;
+  91          sfr P5=0xc8;
+  92          sfr P5M1=0xc9;
+  93          sfr P5M0=0xca;
+  94          sbit pLock=P5^5; //开锁信号
+  95          
+  96          
+  97          uchar* xdata fieldName[]={"姓名：","部门：","工种："};
+  98          
+  99          uchar xdata staffInfoBuf[FIELD_COUNT][STAFF_INFO_FIELD_LENGTN+1]={'\0'};
+ 100          uchar xdata buf[2*FIELD_COUNT*STAFF_INFO_FIELD_LENGTN];
+ 101          uchar* xdata batStateDesc[]={"检测状态","矿灯取走","矿灯充电","矿灯充满","发生故障"};
+ 102          int xdata batAdValArr[BAT_VAL_ARR_LEN];
+ 103          
+ 104          uchar tready,rready,batState=0,brightValue=0,commState=0,bufIndex=0,updateStaffInteval,curSentenceIndex,cu
+             -rrentChannel=0,isSetted,isInfoSetted=0,batAdValArrIndex=0;
+ 105          unsigned int stateValue=0,msCount=0,mCount=0;
+ 106          bit isSelected=0,updateStaffFlag=0,stateAdFlag=0,brightAdFlag=0,inAddrSetting=0,isInfraredAllowed=0,timeCh
+             -anged=0,lockFlag=0;
+ 107          void storageBaseInfo();
+ 108          
+ 109          uint yuyinTimeCount=0;
+ 110                  
+ 111          
+ 112          
+ 113          //自定义命令格式：xxdd dddd  髙2位表示命令，后6位表示灯架地址 最多64位 0xC0
+ 114          //更新员工信息 1100 0000 请求数据 1000 0000 
+ 115          /*bit isUpdateInfoCmd() {
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 3   
+
+ 116                  return (SBUF&0xC0)==0xC0;
+ 117          }
+ 118          bit isReqUnitInfo() {
+ 119                  return (SBUF&0xC0)==0x80;
+ 120          }
+ 121          */
+ 122          void showAddress(uchar x,uchar y){
+ 123   1              uchar localAddressArr[4];
+ 124   1              configValueArr[CONFIG_ADDR]=configValueArr[CONFIG_ADDR]%1000;
+ 125   1              localAddressArr[0]='0'+configValueArr[CONFIG_ADDR]/100;
+ 126   1              localAddressArr[1]='0'+((configValueArr[CONFIG_ADDR]%100)/10);
+ 127   1              localAddressArr[2]='0'+(configValueArr[CONFIG_ADDR]%10);
+ 128   1              localAddressArr[3]='\0';
+ 129   1              LCD_PutSingleByteString(x,y,localAddressArr);
+ 130   1      }
+ 131          void displayStaffInfo(){
+ 132   1              uchar m, indexi=0,indexj=0,count=0,isChinese=0;
+ 133   1      
+ 134   1              if(inSetting){
+ 135   2                      return; 
+ 136   2              }
+ 137   1              ClrScreen();
+ 138   1              if(configValueArr[CONFIG_DEBUG]>0)
+ 139   1              {
+ 140   2                      for(m=0;m<FIELD_COUNT;m++){
+ 141   3                              LCD_PutString(0,m,fieldName[m]);                                                        
+ 142   3                              LCD_PutString(3,m,staffInfoBuf[m]);
+ 143   3                      }
+ 144   2              }
+ 145   1              else{
+ 146   2              //      LCD_PutString_24_cy(0,staffInfoBuf[0]);
+ 147   2              LCD_PutName_24_cy(0,staffInfoBuf[0]);   
+ 148   2              LCD_PutString(0,2,staffInfoBuf[1]);
+ 149   2              }
+ 150   1      }
+ 151          void redisplayStaffInfoIfNecessary(bit instanceFlag){
+ 152   1              if(inSetting==1){
+ 153   2                      return;
+ 154   2              }
+ 155   1              
+ 156   1              if(isSetted==1){
+ 157   2                      if((instanceFlag==1)){
+ 158   3                              displayStaffInfo();
+ 159   3                      }
+ 160   2              }
+ 161   1              if(configValueArr[CONFIG_DEBUG]>0)
+ 162   1              {
+ 163   2                      showAddress(13,0);
+ 164   2              }
+ 165   1              else{
+ 166   2                      showAddress(13,2);
+ 167   2              }
+ 168   1      
+ 169   1      }
+ 170          
+ 171          void updateStaffInfoIfNeccesary(){
+ 172   1              uchar m,n,i=0;
+ 173   1              if(updateStaffFlag==1){
+ 174   2                      updateStaffFlag=0;
+ 175   2                      isInfoSetted=1;
+ 176   2                      infoChanged=1;
+ 177   2                      for (m = 0; m < FIELD_COUNT; m++) {
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 4   
+
+ 178   3      
+ 179   3                              for (n = 0; n < STAFF_INFO_FIELD_LENGTN; n++) {
+ 180   4                                      
+ 181   4      
+ 182   4                                      staffInfoBuf[m][n] = buf[i++] << 4;
+ 183   4                              
+ 184   4                                      staffInfoBuf[m][n] += (buf[i++]  & 0x0f);
+ 185   4                              }
+ 186   3      
+ 187   3                      }
+ 188   2                      /*调换了storageBaseInfo和redisplayStaffInfoIfNecessary的顺序
+ 189   2                        否则第一次更新人员信息后因isSetted尚未被设置为1，redisplayStaffInfoIfNecessary
+ 190   2                         不会调用displayStaffInfo来显示人员信息
+ 191   2                      */
+ 192   2              //      redisplayStaffInfoIfNecessary(1);
+ 193   2                      storageBaseInfo();
+ 194   2              redisplayStaffInfoIfNecessary(1);
+ 195   2      
+ 196   2              }
+ 197   1      }
+ 198          
+ 199          void sendData(uchar dat)
+ 200          {       
+ 201   1              RS_485_2=RS_T;
+ 202   1              
+ 203   1              S2BUF=dat;      
+ 204   1              while(!(S2CON&S2TI));
+ 205   1              S2CON &= ~S2TI;  
+ 206   1              RS_485_2=RS_R;
+ 207   1      }
+ 208          
+ 209          #define UNIT_STATE_NULL  0
+ 210          #define UNIT_STATE_EMPTY  1
+ 211          #define UNIT_STATE_CHARGING 2
+ 212          #define UNIT_STATE_FULL  3
+ 213          #define UNIT_STATE_ERROR  4
+ 214          
+ 215          void Uart2() interrupt 8 using 1
+ 216          {
+ 217   1              
+ 218   1              if (S2CON & S2RI){
+ 219   2                      
+ 220   2                      S2CON &= ~S2RI; 
+ 221   2                      switch(S2BUF&0x80){
+ 222   3                              case 0x80:{
+ 223   4                                      switch(S2BUF){
+ 224   5                                              case CMD_UPDATE_STAFF:{
+ 225   6                                                      if(inSetting){//为了避免修改地址时，同时修改扇区内容
+ 226   7                                                              return;
+ 227   7                                                      }
+ 228   6                                                      
+ 229   6                                                      commState=COMM_STATE_UPDATE_STAFF_WAIT_ADDRESS;
+ 230   6                                              }
+ 231   5                                              break;
+ 232   5                                              case CMD_OPEN_DOOR:{
+ 233   6                                                      if(inSetting){//为了避免修改地址时，同时修改扇区内容
+ 234   7                                                              return;
+ 235   7                                                      }
+ 236   6                                                      
+ 237   6                                                      commState=COMM_STATE_OPEN_DOOR_WAIT_ADDRESS;
+ 238   6                                              }
+ 239   5                                              break;
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 5   
+
+ 240   5                                              case CMD_REQ_UNIT_INFO:{
+ 241   6                                                      commState=COMM_STATE_REQ_UNIT_INFO_WAIT_ADDRESS;
+ 242   6                                                      
+ 243   6                                              }
+ 244   5                                              break;
+ 245   5                                      }
+ 246   4                              }
+ 247   3                              break;
+ 248   3                              case 0x00:{
+ 249   4                                      switch(commState){
+ 250   5                                              case COMM_STATE_UPDATE_STAFF_WAIT_ADDRESS:{
+ 251   6                                                      
+ 252   6                                                      if(S2BUF==configValueArr[CONFIG_ADDR]){
+ 253   7                                                              LED_RXD=~LED_RXD;
+ 254   7                                                              commState=COMM_STATE_UPDATE_STAFF;
+ 255   7                                                              bufIndex=0;     
+ 256   7                                                      }else{
+ 257   7                                                              commState=COMM_STATE_NOTHING;
+ 258   7                                                              LED_RXD=1;//指示灯灭
+ 259   7                                                      }
+ 260   6                                              }
+ 261   5                                              break;
+ 262   5                                              case COMM_STATE_OPEN_DOOR_WAIT_ADDRESS:{
+ 263   6                                                      
+ 264   6                                                      if(S2BUF==configValueArr[CONFIG_ADDR]){
+ 265   7                                                              LED_RXD=~LED_RXD;
+ 266   7                                                              lockFlag=1;
+ 267   7                                                              commState=COMM_STATE_NOTHING;
+ 268   7                                                                      
+ 269   7                                                      }else{
+ 270   7                                                              commState=COMM_STATE_NOTHING;
+ 271   7                                                              LED_RXD=1;//指示灯灭
+ 272   7                                                      }
+ 273   6                                              }
+ 274   5                                              break;
+ 275   5                                              case COMM_STATE_REQ_UNIT_INFO_WAIT_ADDRESS:{
+ 276   6                                                      
+ 277   6                                                      if(S2BUF==configValueArr[CONFIG_ADDR]){
+ 278   7                                                              LED_RXD=~LED_RXD;
+ 279   7                                                              commState=COMM_STATE_REQ_UNIT_INFO;
+ 280   7                                                              LED_TXD=0;
+ 281   7                                                              sendData((batState|DATA_PRE));
+ 282   7                                         
+ 283   7                                                              LED_TXD=1;//指示灯灭
+ 284   7                                                              LED_RXD=1;//指示灯灭
+ 285   7      
+ 286   7                                                      }else{
+ 287   7                                                              commState=COMM_STATE_NOTHING;
+ 288   7                                                              LED_RXD=1;//指示灯灭
+ 289   7                                                      }
+ 290   6                                              }
+ 291   5                                              break;
+ 292   5                                              case COMM_STATE_UPDATE_STAFF:{
+ 293   6                                                              if((S2BUF&0xF0)!=DATA_PRE_UPDATE_STAFF){
+ 294   7                                                                      return;
+ 295   7                                                              }
+ 296   6                                                              buf[bufIndex++]=S2BUF;
+ 297   6                                                              if(bufIndex==48){
+ 298   7                                                                      LED_RXD=1;//指示灯灭
+ 299   7                                                                      commState=COMM_STATE_NOTHING;
+ 300   7                                                                      updateStaffFlag=1;
+ 301   7      //                                                              ledTest=~ledTest;
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 6   
+
+ 302   7                                                              }
+ 303   6                                              }
+ 304   5                                              break;
+ 305   5                                      }       
+ 306   4                              }
+ 307   3                              break;
+ 308   3                      
+ 309   3                      }
+ 310   2      
+ 311   2              }
+ 312   1              else if (S2CON & S2TI){                       
+ 313   2                      S2CON &= ~S2TI; 
+ 314   2                      if(commState==COMM_STATE_REQ_UNIT_INFO){
+ 315   3                              commState=COMM_STATE_NOTHING;    
+ 316   3                      }
+ 317   2                      RS_485_2=RS_R;
+ 318   2              }
+ 319   1      
+ 320   1      }
+ 321          
+ 322          
+ 323          
+ 324          #define CHARGE_TIME_ARR_LEN 5
+ 325          #define SHOW_TIME 1
+ 326          #define CLEAR_TIME 0
+ 327          uchar  chargeTimeArr[CHARGE_TIME_ARR_LEN+1]={'\0'}; 
+ 328          void setChargeTimeArr(uint lmCount,bit showTime){
+ 329   1              uchar m=0; 
+ 330   1              if(showTime==CLEAR_TIME){
+ 331   2                      for(m=0;m<CHARGE_TIME_ARR_LEN;m++){
+ 332   3                              chargeTimeArr[m]=' ';
+ 333   3                      }
+ 334   2                      
+ 335   2              }
+ 336   1              else{
+ 337   2                uchar minute=lmCount%60; 
+ 338   2                uchar hour=lmCount/60;
+ 339   2                chargeTimeArr[0]='0'+(hour/10);
+ 340   2                chargeTimeArr[1]='0'+(hour%10);
+ 341   2                chargeTimeArr[2]='-';
+ 342   2                chargeTimeArr[3]='0'+(minute/10);
+ 343   2                chargeTimeArr[4]='0'+(minute%10);
+ 344   2               
+ 345   2              }
+ 346   1      }
+ 347          void showTimeIfNeccesary(){
+ 348   1              uchar m=0;
+ 349   1              if( inSetting==1){
+ 350   2                      return;
+ 351   2              }
+ 352   1              if(batState==UNIT_STATE_CHARGING||batState==UNIT_STATE_FULL){
+ 353   2                      setChargeTimeArr(mCount,SHOW_TIME);
+ 354   2              }
+ 355   1              
+ 356   1              else{
+ 357   2                      setChargeTimeArr(0,CLEAR_TIME);
+ 358   2              }
+ 359   1              LCD_PutSingleByteString(11,3,chargeTimeArr);
+ 360   1              //LCD_PutString(6,4,"");
+ 361   1      }
+ 362          void clearTime(){
+ 363   1              msCount=0;
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 7   
+
+ 364   1              mCount=0;
+ 365   1      }
+ 366          void init() {
+ 367   1              uchar m;
+ 368   1              //锁
+ 369   1              P5M1=0x00;
+ 370   1              P5M0=0x20;
+ 371   1              //语音
+ 372   1              P3M1=0x10;//0b00010000;
+ 373   1              P3M0=0x60;//0b01100000;
+ 374   1              //通讯使能？
+ 375   1              P2M1=0x00;
+ 376   1              P2M0=0x01;
+ 377   1              RS_485_2=RS_R; //485初始处于接收状态
+ 378   1              
+ 379   1              //定时器0初始化 50ms
+ 380   1      /*      TMOD |= 0x01;                        
+ 381   1          TH0=(65536-45872)/256;            
+ 382   1              TL0=(65536-45872)%256; 
+ 383   1              ET0=1;           
+ 384   1              TR0=1; 
+ 385   1      */ 
+ 386   1              AUXR &= 0x7F;           //定时器时钟12T模式
+ 387   1              TMOD &= 0xF0;           //设置定时器模式
+ 388   1              TMOD |= 0x01;           //设置定时器模式
+ 389   1              //50ms
+ 390   1              //TL0 = 0x00;           //设置定时初值
+ 391   1              //TH0 = 0x4C;           //设置定时初值
+ 392   1              //600us
+ 393   1              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+ 394   1              TH0 = 0xFD;             //设置定时初值
+ 395   1              TF0 = 0;                //清除TF0标志
+ 396   1              ET0=1;
+ 397   1              TR0 = 1;                //定时器0开始计时       
+ 398   1      
+ 399   1         //串口2初始化
+ 400   1              
+ 401   1              
+ 402   1              S2CON = 0x50;           //8位数据,可变波特率
+ 403   1              AUXR |= 0x04;           //定时器2时钟为Fosc,即1T
+ 404   1              T2L = 0xE0;             //设定定时初值
+ 405   1              T2H = 0xFE;             //设定定时初值
+ 406   1              AUXR |= 0x10;           //启动定时器2
+ 407   1              
+ 408   1              LCD_DispIni(); //先初始化12864屏
+ 409   1              //片内AD初始化
+ 410   1              P1ASF = 0x18;  //设置P1.4、P1.3口                     
+ 411   1          ADC_RES = 0;                        
+ 412   1              ADC_CONTR = ADC_POWER | ADC_SPEEDLL;
+ 413   1      //  delayMs(50); 
+ 414   1      //      EADC=1; //开ADC中断 不采用中断方式
+ 415   1      
+ 416   1      //      IP=0x10;//设定串口1为髙优先级
+ 417   1      //      ES=1; //开串口1中断
+ 418   1      
+ 419   1              IP=0x00;
+ 420   1              IP2=0x01;//设定串口2为髙优先级
+ 421   1              IE2 = 0x01;             //使能串口2中断         
+ 422   1      /*      //外部中断1 初始化
+ 423   1              EX1=1;         
+ 424   1          IT1=1;  
+ 425   1      */
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 8   
+
+ 426   1      //外部中断0 初始化 使红外检测生效
+ 427   1              IT0 = 1;   
+ 428   1              EX0 = 1;
+ 429   1              EA = 1;
+ 430   1                      
+ 431   1              init_spi(); 
+ 432   1              
+ 433   1      
+ 434   1              for(m=0;m<BAT_VAL_ARR_LEN;m++){
+ 435   2                      batAdValArr[m]=-1;
+ 436   2              }
+ 437   1      
+ 438   1              isSelected=0;
+ 439   1              isLedDisplay=1; //灯座内LED默认灭。
+ 440   1              initYuyin();
+ 441   1      }
+ 442          
+ 443          
+ 444          
+ 445          
+ 446          
+ 447          void displayADC(){
+ 448   1              
+ 449   1                      uchar stateValueStr[5]={'\0'};
+ 450   1                      uchar adcBrightStr[4]={'\0'};
+ 451   1                      if(inSetting==1){
+ 452   2                              return;
+ 453   2                      }
+ 454   1      
+ 455   1                      if(stateAdFlag==1){
+ 456   2                              stateAdFlag=0;
+ 457   2                              stateValueStr[0]='0'+(stateValue/1000);
+ 458   2                              stateValueStr[1]='0'+((stateValue%1000)/100);
+ 459   2                              stateValueStr[2]='0'+((stateValue%100)/10);
+ 460   2                              stateValueStr[3]='0'+(stateValue%10);
+ 461   2                              stateValueStr[4]='\0';
+ 462   2                      //      LCD_PutString(0,3,"模拟量：");
+ 463   2                              LCD_PutSingleByteString(12,2,stateValueStr);
+ 464   2              
+ 465   2                      }
+ 466   1                      if(brightAdFlag==1){
+ 467   2                              brightAdFlag=0;
+ 468   2                              adcBrightStr[0]='0'+(brightValue/100);
+ 469   2                              adcBrightStr[1]='0'+((brightValue%100)/10);
+ 470   2                              adcBrightStr[2]='0'+((brightValue%100)%10);
+ 471   2                              adcBrightStr[3]='\0';
+ 472   2                              LCD_PutSingleByteString(13,1,adcBrightStr);
+ 473   2                      }
+ 474   1      
+ 475   1      }
+ 476          void displayBatState(){
+ 477   1                      
+ 478   1              
+ 479   1                      if(inSetting==1){
+ 480   2                              return;
+ 481   2                      }
+ 482   1      
+ 483   1                      {
+ 484   2                      
+ 485   2                              switch(batState){
+ 486   3                              case UNIT_STATE_NULL :
+ 487   3                                      NullCGRAM();
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 9   
+
+ 488   3                                      break;
+ 489   3                              case UNIT_STATE_EMPTY :
+ 490   3                                      EmptyCGRAM();
+ 491   3                                      break;
+ 492   3                              case UNIT_STATE_CHARGING :
+ 493   3                                      HalfCGRAM();
+ 494   3                                      
+ 495   3                                      break;
+ 496   3                              case UNIT_STATE_FULL :
+ 497   3                                      FullCGRAM();
+ 498   3                                      break;
+ 499   3                              case UNIT_STATE_ERROR:
+ 500   3                                      ErrorCGRAM();
+ 501   3                                      break;
+ 502   3                              default :
+ 503   3                                      break;
+ 504   3                              }
+ 505   2                              DisplayCGRAM(0,4); 
+ 506   2                              LCD_PutString(1,3,batStateDesc[batState]);
+ 507   2                      //      delayMs(100);
+ 508   2                      }
+ 509   1      
+ 510   1      }
+ 511          void storageBaseInfo(){
+ 512   1              uchar m,n;
+ 513   1              IapEraseSector(IAP_BASEINFO_ADDRESS); 
+ 514   1      
+ 515   1              if(isInfoSetted==1){
+ 516   2                      isSetted=1;
+ 517   2              }
+ 518   1              IapProgramByte(IAP_BASEINFO_ADDRESS+IS_SETTED_ADDR, isSetted);
+ 519   1              
+ 520   1              for (m = 0; m < FIELD_COUNT; m++) {
+ 521   2                      for (n = 0; n < STAFF_INFO_FIELD_LENGTN; n++) {
+ 522   3                              IapProgramByte(IAP_BASEINFO_ADDRESS+STAFF_INFO_ADDR+m*STAFF_INFO_FIELD_LENGTN+n, staffInfoBuf[m][n]);
+ 523   3                      }
+ 524   2              }
+ 525   1           
+ 526   1      }
+ 527          void retreiveBaseInfo(){
+ 528   1              uchar m,n;
+ 529   1              
+ 530   1      
+ 531   1              isSetted=IapReadByte(IAP_BASEINFO_ADDRESS+IS_SETTED_ADDR);
+ 532   1              if(isSetted>1){
+ 533   2                      isSetted=0;
+ 534   2              }
+ 535   1      
+ 536   1              for (m = 0; m < FIELD_COUNT; m++) {
+ 537   2                      for (n = 0; n < STAFF_INFO_FIELD_LENGTN; n++) {
+ 538   3                              staffInfoBuf[m][n]=IapReadByte(IAP_BASEINFO_ADDRESS+STAFF_INFO_ADDR+m*STAFF_INFO_FIELD_LENGTN+n);
+ 539   3                      }
+ 540   2              }
+ 541   1      }
+ 542          void storageInfo(){
+ 543   1              saveConfig();
+ 544   1              storageBaseInfo();
+ 545   1      }
+ 546          void retreiveInfo(){
+ 547   1              retreiveConfig();
+ 548   1              retreiveBaseInfo();
+ 549   1      }
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 10  
+
+ 550          unsigned int getAdValueByChannel(uchar channel,uchar bits){
+ 551   1              unsigned int result;
+ 552   1              bit adFinished=0;
+ 553   1      
+ 554   1              ADC_CONTR = ADC_POWER | ADC_SPEEDLL | ADC_START | channel;
+ 555   1              while(adFinished==0){
+ 556   2                      adFinished=(ADC_CONTR&ADC_FLAG);
+ 557   2              }
+ 558   1              if(bits==10)
+ 559   1              {
+ 560   2                      result=(ADC_RES*4+(ADC_LOW2&0x03));
+ 561   2              }
+ 562   1              else{                                                                                            
+ 563   2                      result=ADC_RES;
+ 564   2              }
+ 565   1              ADC_CONTR &= !ADC_FLAG; 
+ 566   1              return result;
+ 567   1      }
+ 568          bit oldTipFlag=0,tipFlag=0,brightChangeFlag=0;
+ 569          #define YUYIN_TIME_COUNT_THRESHOLD 200  //50ms*200=10s
+ 570          void getAdValue(){
+ 571   1                      
+ 572   1              stateValue=getAdValueByChannel(ADC_STATE_CHANNEL,10);
+ 573   1              batAdValArr[(batAdValArrIndex++)%BAT_VAL_ARR_LEN]=stateValue;
+ 574   1              stateAdFlag=1;
+ 575   1              delayMs(100);
+ 576   1      
+ 577   1              brightValue=getAdValueByChannel(ADC_BRIGHT_CHANNEL,8);
+ 578   1      
+ 579   1              brightAdFlag=1;
+ 580   1              if(brightValue<configValueArr[CONFIG_BRIGHT]){
+ 581   2                      isLedDisplay=0; 
+ 582   2                      
+ 583   2                      oldTipFlag=tipFlag;
+ 584   2                      tipFlag=1;//认为门已打开，进行语音提示
+ 585   2                      
+ 586   2              }
+ 587   1              else{
+ 588   2                      isLedDisplay=1;
+ 589   2                      oldTipFlag=tipFlag;
+ 590   2                      tipFlag=0;//认为门已打开，进行语音提示
+ 591   2              }
+ 592   1      
+ 593   1              delayMs(100);
+ 594   1      
+ 595   1      }
+ 596          
+ 597          uchar oldBatState=UNIT_STATE_NULL;
+ 598          uchar emptyCount=0;fullCount=0,chargingCount=0; //保存某个状态连续出现的次数
+ 599          void stateTest(){
+ 600   1              //BAT_VAL_ARR_LEN
+ 601   1              uchar m,zeroCount=0,usefulCount=0,emptyRangeCount=0,fullRangeCount=0,chargingRangeCount=0;//fullRangeCoun
+             -t是为了解决充满时有时平均值也会小于10的问题，充满情况下一般10个采集点中至少会有3个大于10，而空载不会，但需要在实际情况中
+             -验证下正在充状态会不会有三个值掉到50以下。
+ 602   1              unsigned int sum=0,everage=0;
+ 603   1              for(m=0;m<BAT_VAL_ARR_LEN;m++){
+ 604   2                      if(batAdValArr[m]==-1){
+ 605   3                              batState=UNIT_STATE_NULL;
+ 606   3                              return;
+ 607   3                      }else if(batAdValArr[m]==0){
+ 608   3                              zeroCount++;
+ 609   3                      }
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 11  
+
+ 610   2                      else{
+ 611   3                              if(batAdValArr[m]>configValueArr[CONFIG_BATFULL_UP]){    //充满和正在充 阈值 30？
+ 612   4                                      chargingRangeCount++;
+ 613   4                              }
+ 614   3                              else if(batAdValArr[m]>configValueArr[CONFIG_BATFULL_DOWN]){ 
+ 615   4                                      fullRangeCount++;
+ 616   4                              }
+ 617   3                              else{
+ 618   4                                      emptyRangeCount++;
+ 619   4                              }
+ 620   3                              usefulCount++;
+ 621   3                              sum+=batAdValArr[m];
+ 622   3                      }
+ 623   2              }
+ 624   1                      everage=(usefulCount==0?0:sum/usefulCount);
+ 625   1                      if(zeroCount>7||everage<=configValueArr[CONFIG_BATFULL_DOWN]){
+ 626   2                                      if(emptyCount<250){
+ 627   3                                              emptyCount++;
+ 628   3                                      }
+ 629   2                                      fullCount=0;
+ 630   2                                      chargingCount=0;
+ 631   2                                      
+ 632   2                              
+ 633   2                      } 
+ 634   1              
+ 635   1      
+ 636   1                      if(fullRangeCount>4 ||everage>configValueArr[CONFIG_BATFULL_DOWN]){
+ 637   2                              emptyCount=0;
+ 638   2                              if(fullCount<250){
+ 639   3                                      fullCount++;
+ 640   3                              }
+ 641   2                              //充满状态的过渡期，也可认为是处于正在充电状态
+ 642   2                              if(chargingCount<250){
+ 643   3                                      chargingCount++;
+ 644   3                              }
+ 645   2                              
+ 646   2                      }
+ 647   1                      if(chargingRangeCount>7||everage>=configValueArr[CONFIG_BATFULL_UP]){
+ 648   2                              emptyCount=0;
+ 649   2                              fullCount=0;
+ 650   2                              if(chargingCount<250){
+ 651   3                                      chargingCount++;
+ 652   3                              }
+ 653   2                              
+ 654   2                      }
+ 655   1                      if(emptyCount>3){
+ 656   2                              oldBatState=batState; //todo应在batState设置新值后再设定oldBatState状态
+ 657   2                              batState=UNIT_STATE_EMPTY;
+ 658   2                              clearTime();
+ 659   2                      }
+ 660   1                      else if(fullCount>20){
+ 661   2                              chargingCount=0; //充满状态的过渡期结束，可认定进入充满状态
+ 662   2                              oldBatState=batState;
+ 663   2                              batState=UNIT_STATE_FULL;
+ 664   2                      }
+ 665   1                      else if(chargingCount>3){
+ 666   2                              oldBatState=batState;
+ 667   2                              batState=UNIT_STATE_CHARGING;
+ 668   2                      }
+ 669   1      
+ 670   1                      else {
+ 671   2                              batState=oldBatState;
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 12  
+
+ 672   2                      }
+ 673   1                      
+ 674   1              
+ 675   1      }
+ 676          
+ 677          unsigned int exCount;
+ 678          void startSettingIfNecessary(){
+ 679   1          if(startSetting==1){
+ 680   2                       
+ 681   2                      startSetting=0;
+ 682   2                      setState=SET_STATE_INIT; //考虑移至setInfraredFlag()方法后面
+ 683   2                  inSetting=1;
+ 684   2                      ClrScreen();
+ 685   2                      LCD_PutString(3,0,"设置");
+ 686   2                      setInfraredFlag();
+ 687   2              
+ 688   2                      
+ 689   2              }
+ 690   1              exCount=0; //任何情况下都清除多余的外部终端计数，防止干扰的信号。
+ 691   1      }
+ 692          
+ 693          
+ 694          void EX0_ISR (void) interrupt 0 
+ 695          {
+ 696   1         //50ms模式下          
+ 697   1                       
+ 698   1       /* if(!inSetting){
+ 699   1              
+ 700   1           exCount++;
+ 701   1                if(exCount>=60){  //多次按键才生效，避免误操作
+ 702   1                        exCount=0;
+ 703   1                    startSetting=1;
+ 704   1                }
+ 705   1                return;
+ 706   1              
+ 707   1        }
+ 708   1        else
+ 709   1        {
+ 710   1              irExProcess();
+ 711   1        }
+ 712   1       */
+ 713   1        //600us模式下
+ 714   1       irExProcess();
+ 715   1      }
+ 716          
+ 717          
+ 718          /*
+ 719          void Timer0_isr(void) interrupt 1 using 1
+ 720          {
+ 721                  if(isInfraredAllowed==1){
+ 722                          irTime0Process();
+ 723                  }
+ 724                  else{
+ 725                    //50ms
+ 726                    TL0 = 0x00;           //设置定时初值
+ 727                    TH0 = 0x4C;           //设置定时初值
+ 728                    yuyinTimeCount++;
+ 729                    if(batState==UNIT_STATE_CHARGING||batState==UNIT_STATE_FULL){
+ 730                          msCount++;
+ 731                          if(msCount>=1200){//50ms*20*60
+ 732                                  msCount=0;
+ 733                                  mCount++;
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 13  
+
+ 734                                  if(mCount>=1440){//60*24
+ 735                                          mCount=0;
+ 736                                  }
+ 737                          }
+ 738                    }
+ 739                  }
+ 740          
+ 741                  
+ 742          }
+ 743          */
+ 744          //统一使用600us计时
+ 745          //涉及修改处：  1、Timer0_isr 2、init初时间 3、config中clearInfraredFlag()
+ 746          //同时修改打开红外设置方式 涉及修改处  1、void EX0_ISR (void) interrupt 0 2、  config中processSettingIfNec
+             -essary() 3、Ir_work中加入IR_CHANNEL分支
+ 747          uint ms50Count=0;
+ 748          void Timer0_isr(void) interrupt 1 using 1
+ 749          {
+ 750   1              
+ 751   1              irTime0Process();
+ 752   1              //寄存器重置在irTime0Process中
+ 753   1              if(ms50Count++>=83){   //约51ms
+ 754   2                      ms50Count=0;
+ 755   2                      yuyinTimeCount++;
+ 756   2                      if(batState==UNIT_STATE_CHARGING||batState==UNIT_STATE_FULL){
+ 757   3                      msCount++;
+ 758   3                      if(msCount>=1200){//50ms*20*60
+ 759   4                              msCount=0;
+ 760   4                              mCount++;
+ 761   4                              if(mCount>=1440){//60*24
+ 762   5                                      mCount=0;
+ 763   5                              }
+ 764   4                      }
+ 765   3                      }
+ 766   2              }
+ 767   1      
+ 768   1      
+ 769   1              
+ 770   1      }
+ 771          void dispLockInfo(bit dis){
+ 772   1              if(configValueArr[CONFIG_DEBUG]==0)
+ 773   1              {
+ 774   2                      if(dis==1){
+ 775   3                              LCD_PutString(4,2,"开门");               
+ 776   3                      }
+ 777   2                      else{
+ 778   3                              LCD_PutString(4,2,"  ");                
+ 779   3                      }
+ 780   2              }
+ 781   1              else{
+ 782   2                      if(dis==1){
+ 783   3              
+ 784   3                              LCD_PutSingleByteString(12,1,"1");
+ 785   3       
+ 786   3                      }
+ 787   2                      else{
+ 788   3              
+ 789   3                              LCD_PutSingleByteString(12,1,"0");
+ 790   3      
+ 791   3                      }
+ 792   2              }
+ 793   1      }
+ 794          void lockIfNeccessary(){
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 14  
+
+ 795   1              if(lockFlag==1){
+ 796   2                      lockFlag=0;
+ 797   2                      dispLockInfo(1);
+ 798   2                      pLock=1;
+ 799   2                      delayMs(1);
+ 800   2                      pLock=0;
+ 801   2                      //delayMS(1500);//经测试可行
+ 802   2                      delayMs(2000);
+ 803   2                      pLock=1;
+ 804   2                      dispLockInfo(0);
+ 805   2              }
+ 806   1      }
+ 807          void yuyinIfOk(uchar sel,bit instant){
+ 808   1              if(instant||(yuyinTimeCount>=YUYIN_TIME_COUNT_THRESHOLD)){
+ 809   2                      yuyin(sel);
+ 810   2                      yuyinTimeCount=0;
+ 811   2              }
+ 812   1      /*      else if(yuyinTimeCount>=YUYIN_TIME_COUNT_THRESHOLD){
+ 813   1              
+ 814   1              }
+ 815   1      */      
+ 816   1      }
+ 817          #define YUYIN_MENYIDAKAI 4
+ 818          #define YUYIN_QINGGUANMEN 2
+ 819          void yuyinIfNeccessary(){
+ 820   1              if(tipFlag==1){
+ 821   2                      if(oldTipFlag!=tipFlag){        
+ 822   3                              yuyinIfOk(YUYIN_MENYIDAKAI,1);
+ 823   3                      }
+ 824   2                      else{
+ 825   3                         yuyinIfOk(YUYIN_QINGGUANMEN,0);
+ 826   3                      }
+ 827   2              }
+ 828   1      }
+ 829          
+ 830          void main()
+ 831          {
+ 832   1      
+ 833   1              retreiveInfo();
+ 834   1              
+ 835   1              init();
+ 836   1      
+ 837   1              redisplayStaffInfoIfNecessary(1);
+ 838   1              while(1){
+ 839   2                      tready=1;
+ 840   2                      rready=1;
+ 841   2                      getAdValue();
+ 842   2                      yuyinIfNeccessary();
+ 843   2                      
+ 844   2                      updateStaffInfoIfNeccesary();
+ 845   2      //              redisplayStaffInfoIfNecessary(0);
+ 846   2                      if(configValueArr[CONFIG_DEBUG]>0){
+ 847   3                              
+ 848   3                              displayADC();
+ 849   3                      }
+ 850   2                      stateTest();
+ 851   2                      displayBatState();
+ 852   2                      showTimeIfNeccesary();
+ 853   2      //              keyScan();
+ 854   2                      startSettingIfNecessary();
+ 855   2                      processSettingIfNecessary();
+ 856   2                      lockIfNeccessary();
+C51 COMPILER V9.01   MAIN                                                                  02/25/2014 14:05:21 PAGE 15  
+
+ 857   2              }
+ 858   1      }
+ 859          
+ 860          /*void  main(void)
+ 861          { 
+ 862          
+ 863                  uchar xdata str[] = "西安重装",str2[] = "渭南光电科技";
+ 864                          init_spi();
+ 865                   
+ 866                  LCD_DispIni();
+ 867                  ClrScreen();
+ 868                          LCD_PutString(0,0,str);
+ 869                          LCD_PutString_24(0,1,str);
+ 870                  //      LCD_PutString(4,0,str2);
+ 871                  //      FullCGRAM();
+ 872                  //      DisplayCGRAM(1,3);
+ 873          
+ 874                  while(1)
+ 875             {  
+ 876            //  delayus(10000);   
+ 877              //  lcd_disp_sz_str(0,0,str);
+ 878                  
+ 879              
+ 880             }
+ 881          }
+ 882          */
+ 883          
+ 884          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2619    ----
+   CONSTANT SIZE    =     92    ----
+   XDATA SIZE       =    155      32
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =     11       5
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,9 @@
+"config.obj",
+"eeprom.obj",
+"main.obj",
+"useful.obj",
+"hanzi.obj",
+"lcd12864.obj",
+"vvspi.obj" 
+TO "stc15_infra_12864_test" 
+RAMSIZE(256) 

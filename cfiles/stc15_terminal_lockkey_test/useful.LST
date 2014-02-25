@@ -1,0 +1,40 @@
+C51 COMPILER V9.01   USEFUL                                                                02/08/2014 15:58:19 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE USEFUL
+OBJECT MODULE PLACED IN useful.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE useful.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "useful.h"
+   2          void delayUs(uint t) {
+   3   1              while (--t)
+   4   1                      ;
+   5   1      }
+   6          
+   7          void delayMs(uint t) {
+   8   1      
+   9   1              while (t--) {
+  10   2      
+  11   2                      delayUs(245);
+  12   2                      delayUs(245);
+  13   2                      delayUs(245);
+  14   2                      delayUs(245);
+  15   2              }
+  16   1      
+  17   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     44    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

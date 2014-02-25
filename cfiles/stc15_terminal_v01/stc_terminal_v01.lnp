@@ -1,0 +1,10 @@
+"hanzi.obj",
+"insideStorage.obj",
+"lcd12864.obj",
+"main.obj",
+"vvspi.obj",
+"useful.obj",
+"config.obj",
+"yuyin.obj" 
+TO "stc_terminal_v01" 
+RAMSIZE(256) 

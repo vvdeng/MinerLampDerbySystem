@@ -1,0 +1,10 @@
+"display.obj",
+"hanzi.obj",
+"insideStorage.obj",
+"lcd12864.obj",
+"main.obj",
+"useful.obj",
+"vvspi.obj",
+"config.obj" 
+TO "stc15_infrasetting_12864_test" 
+RAMSIZE(256) 

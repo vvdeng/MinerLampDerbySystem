@@ -1,0 +1,84 @@
+C51 COMPILER V9.01   INSIDESTORAGE                                                         02/07/2014 13:06:05 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE INSIDESTORAGE
+OBJECT MODULE PLACED IN insideStorage.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE insideStorage.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <reg52.h>  
+   2          #include<intrins.h>
+   3          #include "insideStorage.h"
+   4          
+   5          
+   6          
+   7          void IapIdle()
+   8          {
+   9   1          IAP_CONTR = 0;                  //关闭IAP功能
+  10   1          IAP_CMD = 0;                    //清除命令寄存器
+  11   1          IAP_TRIG = 0;                   //清除触发寄存器
+  12   1          IAP_ADDRH = 0x80;               //将地址设置到非IAP区域
+  13   1          IAP_ADDRL = 0;
+  14   1      }
+  15          
+  16          
+  17          BYTE IapReadByte(WORD addr)
+  18          {
+  19   1          BYTE dat;                       //数据缓冲区
+  20   1      
+  21   1          IAP_CONTR = ENABLE_IAP;         //使能IAP
+  22   1          IAP_CMD = CMD_READ;             //设置IAP命令
+  23   1          IAP_ADDRL = addr;               //设置IAP低地址
+  24   1          IAP_ADDRH = addr >> 8;          //设置IAP高地址
+  25   1          IAP_TRIG = 0x5a;                //写触发命令(0x5a)
+  26   1          IAP_TRIG = 0xa5;                //写触发命令(0xa5)
+  27   1          _nop_();                        //等待ISP/IAP/EEPROM操作完成
+  28   1          dat = IAP_DATA;                 //读ISP/IAP/EEPROM数据
+  29   1          IapIdle();                      //关闭IAP功能
+  30   1      
+  31   1          return dat;                     //返回
+  32   1      }
+  33          
+  34          
+  35          void IapProgramByte(WORD addr, BYTE dat)
+  36          {
+  37   1          IAP_CONTR = ENABLE_IAP;         //使能IAP
+  38   1          IAP_CMD = CMD_PROGRAM;          //设置IAP命令
+  39   1          IAP_ADDRL = addr;               //设置IAP低地址
+  40   1          IAP_ADDRH = addr >> 8;          //设置IAP高地址
+  41   1          IAP_DATA = dat;                 //写ISP/IAP/EEPROM数据
+  42   1          IAP_TRIG = 0x5a;                //写触发命令(0x5a)
+  43   1          IAP_TRIG = 0xa5;                //写触发命令(0xa5)
+  44   1          _nop_();                        //等待ISP/IAP/EEPROM操作完成
+  45   1          IapIdle();
+  46   1      }
+  47          
+  48          void IapEraseSector(WORD addr)
+  49          {
+  50   1          IAP_CONTR = ENABLE_IAP;         //使能IAP
+  51   1          IAP_CMD = CMD_ERASE;            //设置IAP命令
+  52   1          IAP_ADDRL = addr;               //设置IAP低地址
+  53   1          IAP_ADDRH = addr >> 8;          //设置IAP高地址
+  54   1          IAP_TRIG = 0x5a;                //写触发命令(0x5a)
+  55   1          IAP_TRIG = 0xa5;                //写触发命令(0xa5)
+C51 COMPILER V9.01   INSIDESTORAGE                                                         02/07/2014 13:06:05 PAGE 2   
+
+  56   1          _nop_();                        //等待ISP/IAP/EEPROM操作完成
+  57   1          IapIdle();
+  58   1      }
+  59          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     83    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

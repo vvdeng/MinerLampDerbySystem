@@ -1,0 +1,4 @@
+"main.obj",
+"useful.obj" 
+TO "stc12_yuyin_test" 
+RAMSIZE(256) 

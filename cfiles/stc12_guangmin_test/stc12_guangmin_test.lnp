@@ -1,0 +1,6 @@
+"hanzi.obj",
+"lcd12864.obj",
+"main.obj",
+"vvspi.obj" 
+TO "stc12_guangmin_test" 
+RAMSIZE(256) 

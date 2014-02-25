@@ -1,0 +1,832 @@
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE LCD12864
+OBJECT MODULE PLACED IN lcd12864.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE lcd12864.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /*
+   2          注意！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！11
+   3          蒋总的屏CS1、CS2是高电平有效，且延时时间经实践需选为200us
+   4          市场上的屏CS1、CS2是低电平有效，且延时时间经实践需选为100us
+   5          */
+   6          #include "lcd12864.h"
+   7          #include "hanzi.h"
+   8          #include "vvspi.h"
+   9          #define ENABLE 1
+  10          #define DISENABLE 0
+  11          extern bit infoChanged;
+  12          unsigned char xdata null16x16[]={ 
+  13          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+  14          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+  15          };
+  16          unsigned char xdata underline16x16[]={ 
+  17          0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,0x01,
+  18          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+  19          
+  20          };      
+  21          unsigned char xdata full16x16[]={ 
+  22          0x00,0x00,0x00,0x00,0xfc,0xfc,0xff,0xff,0xff,0xff,0xfc,0xfc,0x00,0x00,0x00,0x00,
+  23          0x00,0x00,0x00,0x00,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+  24          
+  25          };
+  26          unsigned char xdata half16x16[]={ 
+  27          0x00,0x00,0x00,0x00,0xfc,0x04,0x07,0x07,0x07,0x07,0x04,0xfc,0x00,0x00,0x00,0x00,
+  28          0x00,0x00,0x00,0x00,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+  29          };
+  30          
+  31          /*unsigned char xdata half16x16[]={
+  32          0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,  
+  33          0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, };*/
+  34          unsigned char xdata empty16x16[]={ 
+  35          0x00,0x00,0x00,0x00,0xfc,0x04,0x07,0x07,0x07,0x07,0x04,0xfc,0x00,0x00,0x00,0x00,
+  36          0x00,0x00,0x00,0x00,0xff,0x80,0x80,0x80,0x80,0x80,0x80,0xff,0x00,0x00,0x00,0x00,
+  37          };
+  38          
+  39          unsigned char xdata error16x16[]={ 
+  40          0x00,0x00,0x00,0x00,0xfc,0x24,0x47,0x87,0x87,0x47,0x24,0xfc,0x00,0x00,0x00,0x00,
+  41          0x00,0x00,0x00,0x00,0xff,0x84,0x82,0x81,0x81,0x82,0x84,0xff,0x00,0x00,0x00,0x00,
+  42          };
+  43          unsigned char xdata arrow16x16[]={ 
+  44          0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x80,0x90,0xA0,0xC0,0x80,
+  45          0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x02,0x01,0x00,
+  46          };
+  47          void delayus(uint n)
+  48          {
+  49   1              uint i;
+  50   1              for(i=0;i<n;i++);
+  51   1      }
+  52          void    LCD_WrCmd(uchar port,uchar  cmd)        
+  53          {  
+  54   1      delayus(DISPLAY_DELAY_TIME);
+  55   1              EN=0;
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 2   
+
+  56   1              if(port==1){
+  57   2                      CS1=ENABLE;
+  58   2                      delayus(DISPLAY_DELAY_TIME);
+  59   2                      CS2=DISENABLE;
+  60   2                      delayus(DISPLAY_DELAY_TIME);
+  61   2              }
+  62   1              else
+  63   1              {
+  64   2                      CS1=DISENABLE;
+  65   2                      delayus(DISPLAY_DELAY_TIME);
+  66   2                      CS2=ENABLE;
+  67   2                      delayus(DISPLAY_DELAY_TIME);
+  68   2         }
+  69   1         DI=0;        
+  70   1         RW=0;
+  71   1         EN=1;
+  72   1         LCD=cmd; 
+  73   1         EN=0;
+  74   1      }
+  75          
+  76          void  LCD_WrDat(uchar port ,uchar wrdata)       
+  77          {  
+  78   1      delayus(DISPLAY_DELAY_TIME);
+  79   1              EN=0;
+  80   1              if(port==1){
+  81   2                      CS1=ENABLE;
+  82   2                      delayus(DISPLAY_DELAY_TIME);
+  83   2                      CS2=DISENABLE;
+  84   2                      delayus(DISPLAY_DELAY_TIME);
+  85   2              }else{
+  86   2                      CS1=DISENABLE;
+  87   2                      delayus(DISPLAY_DELAY_TIME);
+  88   2                      CS2=ENABLE;
+  89   2                      delayus(DISPLAY_DELAY_TIME);
+  90   2         }
+  91   1         DI=1;        
+  92   1         RW=0;
+  93   1         EN=1;
+  94   1         LCD=wrdata; 
+  95   1         EN=0;
+  96   1      }
+  97          
+  98          void  LCD_DispFill(uchar filldata) 
+  99          {  uchar  x, y;
+ 100   1         LCD_WrCmd(1,LCD_STARTROW);
+ 101   1         LCD_WrCmd(2,LCD_STARTROW);   
+ 102   1         for(y=0; y<8; y++)  
+ 103   1         {  LCD_WrCmd(1,LCD_ADDRSTRY+y);
+ 104   2            LCD_WrCmd(1,LCD_ADDRSTRX);
+ 105   2            LCD_WrCmd(2,LCD_ADDRSTRY+y);
+ 106   2            LCD_WrCmd(2,LCD_ADDRSTRX);
+ 107   2         
+ 108   2            for(x=0; x<64; x++)
+ 109   2            {  LCD_WrDat(1,filldata);
+ 110   3               LCD_WrDat(2,filldata);
+ 111   3      
+ 112   3            } 
+ 113   2         }
+ 114   1      }
+ 115          
+ 116          void  LCD_DispIni(void)                 
+ 117          {
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 3   
+
+ 118   1      
+ 119   1         LCD_RST = 0; 
+ 120   1         delayus(1000);
+ 121   1         LCD_RST = 1;  
+ 122   1         delayus(1000);
+ 123   1         LCD_WrCmd(1,LCD_DISPON);      
+ 124   1         LCD_WrCmd(1,LCD_STARTROW);
+ 125   1         delayus(1000);       
+ 126   1         LCD_WrCmd(2,LCD_DISPON);     
+ 127   1         LCD_WrCmd(2,LCD_STARTROW);           
+ 128   1         LCD_DispFill(0x00);
+ 129   1         LCD_WrCmd(1,LCD_ADDRSTRY+0);
+ 130   1         LCD_WrCmd(1,LCD_ADDRSTRX+0);
+ 131   1         LCD_WrCmd(2,LCD_ADDRSTRY+0);
+ 132   1         LCD_WrCmd(2,LCD_ADDRSTRX+0);
+ 133   1      }
+ 134          uchar xdata chrBuf[32];
+ 135          void getBytesFormGB2312s(char* chr){
+ 136   1              uchar i=0, charSize=0,offsetLen=32;
+ 137   1              unsigned long temp_addr;
+ 138   1              
+ 139   1              
+ 140   1                  //用12x12字体
+ 141   1                      temp_addr = GB_ADDR(chr,16);
+ 142   1                      charSize = GB_HZZF_len(chr);
+ 143   1      
+ 144   1                      CS=0;
+ 145   1              //      WriteByte(0x0b);
+ 146   1              //      WriteByte((temp_addr>>16)&0xff);
+ 147   1              //      WriteByte((temp_addr>>8)&0xff);
+ 148   1              //      WriteByte((temp_addr>>0)&0xff);
+ 149   1              //      WriteByte(0xFF);
+ 150   1      
+ 151   1                      WriteByte(0x03);
+ 152   1                      WriteByte((temp_addr>>16)&0xff);
+ 153   1                      WriteByte((temp_addr>>8)&0xff);
+ 154   1                      WriteByte((temp_addr>>0)&0xff);
+ 155   1                      if(charSize==2){
+ 156   2                              for(i=0;i<offsetLen;i++){
+ 157   3                                      chrBuf[i]=ReadByte(); 
+ 158   3                              }
+ 159   2                      } else  if(charSize==1){
+ 160   2              
+ 161   2      
+ 162   2                              for(i=0;i<(offsetLen/2);i++){
+ 163   3                                      chrBuf[2*i]=ReadByte(); //todo此处算法需更改
+ 164   3                                      chrBuf[2*i+1]=0x00; 
+ 165   3                              }
+ 166   2                      
+ 167   2                      }
+ 168   1                      CS=1;   
+ 169   1      }
+ 170          
+ 171          void lcd_disp_sz_char(uchar cx,uchar cy,uchar* chr)
+ 172          {
+ 173   1              uchar *p,i,s,page;
+ 174   1              uchar port;
+ 175   1      
+ 176   1              getBytesFormGB2312s(chr);
+ 177   1              p=chrBuf;
+ 178   1              if(cx<4)
+ 179   1              {
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 4   
+
+ 180   2                      port=1;
+ 181   2                      s=cx<<4;
+ 182   2              }
+ 183   1              else
+ 184   1              {
+ 185   2                      port=2;
+ 186   2                      s=((cx-4)<<4);
+ 187   2                              
+ 188   2              }
+ 189   1              
+ 190   1              for(page=0;page<2;page++)
+ 191   1              {
+ 192   2                      LCD_WrCmd(port,0xb8+cy*2+page);
+ 193   2                      delayus(100);
+ 194   2                      
+ 195   2                      LCD_WrCmd(port,0x40+s);
+ 196   2                      delayus(100);
+ 197   2                      for(i=0;i<16;i++)
+ 198   2                      {
+ 199   3                              LCD_WrDat(port,*p);
+ 200   3                              delayus(10);
+ 201   3                              p++;
+ 202   3                      }
+ 203   2              }
+ 204   1      }
+ 205          void LCD_PutString(unsigned char cx,unsigned char cy,unsigned char  *s)
+ 206          {
+ 207   1              uchar wordCount=0,charSize=0;
+ 208   1              
+ 209   1      //      lcd_disp_sz_char(0,0,s);
+ 210   1      //      lcd_disp_sz_char(4,1,s+2);
+ 211   1              while(*s!='\0'&&wordCount<10)
+ 212   1              {
+ 213   2                      charSize = GB_HZZF_len(s);
+ 214   2                      lcd_disp_sz_char(cx,cy,s);
+ 215   2                      wordCount++;
+ 216   2                      s++;
+ 217   2                      if(charSize==2)
+ 218   2                      {
+ 219   3                      s++;
+ 220   3                      }
+ 221   2                      cx++;
+ 222   2                      if(cx>7) {cx=0;cy++;}
+ 223   2              }
+ 224   1       
+ 225   1      }
+ 226          
+ 227          uchar xdata chrBuf_24[72];
+ 228          void get24x24BytesFormGB2312s(char* chr,uchar * buf){
+ 229   1              uchar i=0, charSize=0,offsetLen=72;
+ 230   1              unsigned long temp_addr;
+ 231   1              
+ 232   1              
+ 233   1      
+ 234   1                      temp_addr = GB_ADDR(chr,24);
+ 235   1                      charSize = GB_HZZF_len(chr);
+ 236   1      
+ 237   1                      CS=0;
+ 238   1              //      WriteByte(0x0b);
+ 239   1              //      WriteByte((temp_addr>>16)&0xff);
+ 240   1              //      WriteByte((temp_addr>>8)&0xff);
+ 241   1              //      WriteByte((temp_addr>>0)&0xff);
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 5   
+
+ 242   1              //      WriteByte(0xFF);
+ 243   1      
+ 244   1                      WriteByte(0x03);
+ 245   1                      WriteByte((temp_addr>>16)&0xff);
+ 246   1                      WriteByte((temp_addr>>8)&0xff);
+ 247   1                      WriteByte((temp_addr>>0)&0xff);
+ 248   1                      if(charSize==2){
+ 249   2                              for(i=0;i<offsetLen;i++){
+ 250   3                                      buf[i]=ReadByte(); 
+ 251   3                              }
+ 252   2                      } else  if(charSize==1){
+ 253   2              
+ 254   2      
+ 255   2                              for(i=0;i<(offsetLen/2);i++){
+ 256   3                                      buf[2*i]=ReadByte(); //todo此处算法需更改
+ 257   3                                      buf[2*i+1]=0x00; 
+ 258   3                              }
+ 259   2                      
+ 260   2                      }
+ 261   1                      CS=1;   
+ 262   1      }
+ 263          
+ 264          
+ 265          void lcd_disp_sz_char_24(uchar cx,uchar cy,uchar* chr,uchar* buf)
+ 266          {
+ 267   1              uchar *p,i,s,page;
+ 268   1              uchar port;
+ 269   1              if(chr!=0)
+ 270   1              {
+ 271   2                      get24x24BytesFormGB2312s(chr,buf);
+ 272   2              }
+ 273   1              p=chrBuf_24;
+ 274   1              if(cx<2)
+ 275   1              {
+ 276   2                      port=1;
+ 277   2                      s=cx*24;
+ 278   2              }
+ 279   1              else
+ 280   1              {
+ 281   2                      port=2;
+ 282   2                      s=((cx-2)*24);
+ 283   2                              
+ 284   2              }
+ 285   1              
+ 286   1              for(page=0;page<3;page++)
+ 287   1              {
+ 288   2                      LCD_WrCmd(port,0xb8+cy*3+page);
+ 289   2                      delayus(100);
+ 290   2                      LCD_WrCmd(port,0x40+s);
+ 291   2                      delayus(100);
+ 292   2                      for(i=0;i<24;i++)
+ 293   2                      {
+ 294   3                              LCD_WrDat(port,*p);
+ 295   3                              delayus(10);
+ 296   3                              p++;
+ 297   3                      }
+ 298   2              }
+ 299   1      }
+ 300          
+ 301          
+ 302          void LCD_PutString_24(unsigned char cx,unsigned char cy,unsigned char  *s)
+ 303          {
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 6   
+
+ 304   1              uchar wordCount=0,charSize=0;
+ 305   1      
+ 306   1      //      lcd_disp_sz_char(0,0,s);
+ 307   1      //      lcd_disp_sz_char(4,1,s+2);
+ 308   1              while(*s!='\0'&&wordCount<10)
+ 309   1              {
+ 310   2                      charSize = GB_HZZF_len(s);
+ 311   2                      lcd_disp_sz_char_24(cx,cy,s,chrBuf_24);
+ 312   2                      wordCount++;
+ 313   2                      s++;
+ 314   2                      if(charSize==2)
+ 315   2                      {
+ 316   3                      s++;
+ 317   3                      }
+ 318   2                      cx++;
+ 319   2                      if(cx>4) {cx=0;cy++;}
+ 320   2              }
+ 321   1       
+ 322   1      }
+ 323          void lcd_disp_sz_char_24_original_x(uchar x,uchar cy,uchar* chr,uchar* buf)
+ 324          {
+ 325   1              uchar *p,i,s,page;
+ 326   1              uchar port;
+ 327   1              if(chr!=0)
+ 328   1              {
+ 329   2                      get24x24BytesFormGB2312s(chr,buf);
+ 330   2              }
+ 331   1              p=buf;
+ 332   1              if(x<64)
+ 333   1              {
+ 334   2                      port=1;
+ 335   2                      s=x;
+ 336   2              }
+ 337   1              else
+ 338   1              {
+ 339   2                      port=2;
+ 340   2                      s=x-64;
+ 341   2                              
+ 342   2              }
+ 343   1              
+ 344   1              for(page=0;page<3;page++)
+ 345   1              {
+ 346   2                      LCD_WrCmd(port,0xb8+cy*3+page);
+ 347   2                      delayus(100);
+ 348   2                      LCD_WrCmd(port,0x40+s);
+ 349   2                      delayus(100);
+ 350   2                      for(i=0;i<24;i++)
+ 351   2                      {
+ 352   3                              LCD_WrDat(port,*p);
+ 353   3                              delayus(10);
+ 354   3                              p++;
+ 355   3                      }
+ 356   2              }
+ 357   1      }
+ 358          
+ 359          void LCD_PutString_24_cy(unsigned char cy,unsigned char  *s)
+ 360          {
+ 361   1              uchar wordCount=0,charSize=0, *p=s;
+ 362   1              uchar x[4];
+ 363   1              //计算总字数，确定排列方式
+ 364   1              while(*p!='\0'){
+ 365   2                      charSize= GB_HZZF_len(p);
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 7   
+
+ 366   2                      wordCount++;
+ 367   2                      p++;
+ 368   2                      if(charSize==2){
+ 369   3                              p++;
+ 370   3                      }
+ 371   2              }
+ 372   1              switch (wordCount){
+ 373   2              case 1:
+ 374   2                      x[0]=39;
+ 375   2                      break;
+ 376   2              case 2:
+ 377   2                  x[0]=29;
+ 378   2                      x[1]=74;
+ 379   2                      break;
+ 380   2              case 3:
+ 381   2                      x[0]=38;
+ 382   2                      x[1]=64;
+ 383   2                      x[2]=86;
+ 384   2                      break;
+ 385   2              default:
+ 386   2                      x[0]=0;
+ 387   2                      x[1]=34;
+ 388   2                      x[2]=69;
+ 389   2                      x[3]=103;
+ 390   2              }
+ 391   1              wordCount=0;
+ 392   1      //      lcd_disp_sz_char(0,0,s);
+ 393   1      //      lcd_disp_sz_char(4,1,s+2);
+ 394   1              while(*s!='\0'&&wordCount<4)
+ 395   1              {
+ 396   2                      charSize = GB_HZZF_len(s);
+ 397   2                      lcd_disp_sz_char_24_original_x(x[wordCount],cy,s,chrBuf_24);
+ 398   2                      wordCount++;
+ 399   2                      s++;
+ 400   2                      if(charSize==2)
+ 401   2                      {
+ 402   3                      s++;
+ 403   3                      }
+ 404   2                      
+ 405   2              }
+ 406   1       
+ 407   1      }
+ 408          uchar xdata nameCharBuf[288];
+ 409          void get24x24NameBytesFormGB2312s(char* chr,uint startIndex){
+ 410   1              uchar i=0, charSize=0,offsetLen=72;
+ 411   1              unsigned long temp_addr;
+ 412   1              
+ 413   1              
+ 414   1      
+ 415   1                      temp_addr = GB_ADDR(chr,24);
+ 416   1                      charSize = GB_HZZF_len(chr);
+ 417   1      
+ 418   1                      CS=0;
+ 419   1              //      WriteByte(0x0b);
+ 420   1              //      WriteByte((temp_addr>>16)&0xff);
+ 421   1              //      WriteByte((temp_addr>>8)&0xff);
+ 422   1              //      WriteByte((temp_addr>>0)&0xff);
+ 423   1              //      WriteByte(0xFF);
+ 424   1      
+ 425   1                      WriteByte(0x03);
+ 426   1                      WriteByte((temp_addr>>16)&0xff);
+ 427   1                      WriteByte((temp_addr>>8)&0xff);
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 8   
+
+ 428   1                      WriteByte((temp_addr>>0)&0xff);
+ 429   1                      if(charSize==2){
+ 430   2                              for(i=0;i<offsetLen;i++){
+ 431   3                                      nameCharBuf[i+startIndex]=ReadByte(); 
+ 432   3                              }
+ 433   2                      } else  if(charSize==1){
+ 434   2              
+ 435   2      
+ 436   2                              for(i=0;i<(offsetLen/2);i++){
+ 437   3                                      nameCharBuf[2*i+startIndex]=ReadByte(); //todo此处算法需更改
+ 438   3                                      nameCharBuf[2*i+1+startIndex]=0x00; 
+ 439   3                              }
+ 440   2                      
+ 441   2                      }
+ 442   1                      CS=1;   
+ 443   1      }
+ 444          void arrangeNameArr(uchar wordCount){
+ 445   1              uint m;
+ 446   1              //暂且全部硬编码
+ 447   1              switch(wordCount){
+ 448   2              case 1:
+ 449   2                 for (m=72;m<288;m++){
+ 450   3                   nameCharBuf[m]=0;
+ 451   3                 }
+ 452   2                 for (m=72;m<144;m++){
+ 453   3                      if(m%24>11){
+ 454   4                   nameCharBuf[m]=nameCharBuf[m-72-12];
+ 455   4                      }
+ 456   3                 }
+ 457   2                 for (m=144;m<216;m++){
+ 458   3                      if(m%24<11){
+ 459   4                   nameCharBuf[m]=nameCharBuf[m-144+12];
+ 460   4                 
+ 461   4                       }
+ 462   3                }
+ 463   2                for (m=0;m<72;m++){
+ 464   3                   nameCharBuf[m]=0;
+ 465   3                 }
+ 466   2      
+ 467   2              break;
+ 468   2              case 2:
+ 469   2               
+ 470   2                 for (m=287;m>215;m--){
+ 471   3                   nameCharBuf[m]=nameCharBuf[m-144];
+ 472   3                 }
+ 473   2                 for (m=72;m<216;m++){
+ 474   3                   nameCharBuf[m]=0;
+ 475   3                 }
+ 476   2              break;
+ 477   2              case 3:
+ 478   2                 for (m=216;m<288;m++){
+ 479   3                   nameCharBuf[m]=nameCharBuf[m-72];
+ 480   3                 }
+ 481   2                 for (m=215;m>143;m--){
+ 482   3                   if(m%24<11){
+ 483   4                       nameCharBuf[m]=nameCharBuf[m-72+12];
+ 484   4                       }
+ 485   3                       else{
+ 486   4                          nameCharBuf[m]=0;
+ 487   4                       }
+ 488   3                 }
+ 489   2                 for (m=143;m>71;m--){
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 9   
+
+ 490   3                    if(m%24>11){
+ 491   4                       nameCharBuf[m]=nameCharBuf[m-0-12];
+ 492   4                        }
+ 493   3                        else{
+ 494   4                              nameCharBuf[m]=0;
+ 495   4                        }
+ 496   3                 
+ 497   3                 }
+ 498   2                 
+ 499   2              break;
+ 500   2              }
+ 501   1      }
+ 502          void LCD_PutName_24_cy(unsigned char cy,unsigned char  *s){
+ 503   1              uchar m,wordCount=0,charSize=0, *p=s,offsetLen=72;
+ 504   1              
+ 505   1              if(infoChanged)
+ 506   1              {
+ 507   2              infoChanged=0;
+ 508   2                      while(*s!='\0'&&wordCount<4)
+ 509   2                      {
+ 510   3                              charSize = GB_HZZF_len(s);
+ 511   3                              get24x24NameBytesFormGB2312s(s,72*wordCount);
+ 512   3                              wordCount++;
+ 513   3                              s++;
+ 514   3                              if(charSize==2)
+ 515   3                              {
+ 516   4                              s++;
+ 517   4                              }
+ 518   3                      
+ 519   3                      }
+ 520   2                      arrangeNameArr(wordCount);
+ 521   2      
+ 522   2              }
+ 523   1              for(m=0;m<4;m++){
+ 524   2                      lcd_disp_sz_char_24_original_x(16+m*24,cy,0,nameCharBuf+offsetLen*m);
+ 525   2              }
+ 526   1      
+ 527   1      }
+ 528          void getBytesFormASCIIs(char* chr){
+ 529   1              uchar i=0, charSize=0,offsetLen=32;
+ 530   1              unsigned long temp_addr;
+ 531   1              
+ 532   1              
+ 533   1      
+ 534   1                      temp_addr = GB_ADDR(chr,16);
+ 535   1                      charSize = GB_HZZF_len(chr);
+ 536   1      
+ 537   1                      CS=0;
+ 538   1              //      WriteByte(0x0b);
+ 539   1              //      WriteByte((temp_addr>>16)&0xff);
+ 540   1              //      WriteByte((temp_addr>>8)&0xff);
+ 541   1              //      WriteByte((temp_addr>>0)&0xff);
+ 542   1              //      WriteByte(0xFF);
+ 543   1      
+ 544   1                      WriteByte(0x03);
+ 545   1                      WriteByte((temp_addr>>16)&0xff);
+ 546   1                      WriteByte((temp_addr>>8)&0xff);
+ 547   1                      WriteByte((temp_addr>>0)&0xff);
+ 548   1                      if(charSize==2){
+ 549   2                              for(i=0;i<offsetLen;i++){
+ 550   3                                      chrBuf[i]=ReadByte(); 
+ 551   3                              }
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 10  
+
+ 552   2                      } else  if(charSize==1){
+ 553   2              
+ 554   2      
+ 555   2                              for(i=0;i<(offsetLen/2);i++){
+ 556   3                                      chrBuf[i]=ReadByte();
+ 557   3                                      chrBuf[16+i]=0x00; 
+ 558   3                              }
+ 559   2                      
+ 560   2                      }
+ 561   1                      CS=1;   
+ 562   1      }
+ 563          void lcd_disp_sz_SingleBytechar(uchar cy,uchar cx,uchar* chr)
+ 564          {
+ 565   1              uchar *p,i,s,page;
+ 566   1              uchar port;
+ 567   1      
+ 568   1              getBytesFormASCIIs(chr);
+ 569   1              p=chrBuf;
+ 570   1              if(cx<8)
+ 571   1              {
+ 572   2                      port=1;
+ 573   2                      s=cx<<3;
+ 574   2              }
+ 575   1              else
+ 576   1              {
+ 577   2                      port=2;
+ 578   2                      s=((cx-8)<<3);
+ 579   2                              
+ 580   2              }
+ 581   1              
+ 582   1              for(page=0;page<2;page++)
+ 583   1              {
+ 584   2                      LCD_WrCmd(port,0xb8+cy*2+page);
+ 585   2                      delayus(100);
+ 586   2                      LCD_WrCmd(port,0x40+s);
+ 587   2                      delayus(100);
+ 588   2                      for(i=0;i<8;i++)
+ 589   2                      {
+ 590   3                              LCD_WrDat(port,*p);
+ 591   3                              delayus(10);
+ 592   3                              p++;
+ 593   3                      }
+ 594   2              }
+ 595   1      }
+ 596          void LCD_PutSingleByteString(unsigned char cx,unsigned char cy,unsigned char  *s)
+ 597          {
+ 598   1              uchar wordCount=0,charSize=0;
+ 599   1              
+ 600   1      //      lcd_disp_sz_char(0,0,s);
+ 601   1      //      lcd_disp_sz_char(4,1,s+2);
+ 602   1              while(*s!='\0'&&wordCount<10)
+ 603   1              {
+ 604   2                      charSize = GB_HZZF_len(s); //charsize只可能为一
+ 605   2                      lcd_disp_sz_SingleBytechar(cy,cx,s);
+ 606   2                      wordCount++;
+ 607   2                      s++;
+ 608   2                      if(charSize==2)
+ 609   2                      {
+ 610   3                      s++;
+ 611   3                      }
+ 612   2                      cx++;
+ 613   2                      if(cx>15) {cx=0;cy++;}
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 11  
+
+ 614   2              }
+ 615   1       
+ 616   1      }
+ 617          uchar charArr[2];
+ 618          void LCD_PutChar(unsigned char cx,unsigned char cy,unsigned char  chr){
+ 619   1              uchar *p,i,s,page;
+ 620   1              uchar port;
+ 621   1              chr=0;//消除warning 该变量无用，仅为兼容之前接口
+ 622   1              cy--;
+ 623   1      
+ 624   1              p=arrow16x16;
+ 625   1              if(cx<4)
+ 626   1              {
+ 627   2                      port=1;
+ 628   2                      s=cx<<4;
+ 629   2              }
+ 630   1              else
+ 631   1              {
+ 632   2                      port=2;
+ 633   2                      s=((cx-4)<<4);
+ 634   2                              
+ 635   2              }
+ 636   1              
+ 637   1              for(page=0;page<2;page++)
+ 638   1              {
+ 639   2                      LCD_WrCmd(port,0xb8+cy*2+page);
+ 640   2                      delayus(100);
+ 641   2                      LCD_WrCmd(port,0x40+s);
+ 642   2                      delayus(100);
+ 643   2                      for(i=0;i<16;i++)
+ 644   2                      {
+ 645   3                              LCD_WrDat(port,*p);
+ 646   3                              delayus(10);
+ 647   3                              p++;
+ 648   3                      }
+ 649   2              }
+ 650   1      }
+ 651          uchar *lbatStateGraph=0;
+ 652          void FullCGRAM()
+ 653          { 
+ 654   1           lbatStateGraph=full16x16;
+ 655   1      }   
+ 656          void HalfCGRAM()
+ 657          { 
+ 658   1           lbatStateGraph=half16x16;
+ 659   1      }
+ 660          void EmptyCGRAM()
+ 661          { 
+ 662   1           lbatStateGraph=empty16x16;
+ 663   1      } 
+ 664          void ErrorCGRAM()
+ 665          { 
+ 666   1           lbatStateGraph=error16x16;
+ 667   1      }
+ 668          void NullCGRAM()
+ 669          { 
+ 670   1           lbatStateGraph=null16x16;
+ 671   1      }
+ 672          void DisplayCGRAM(unsigned char cx,unsigned char cy)
+ 673          {
+ 674   1              
+ 675   1              uchar *p,i,s,page;
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 12  
+
+ 676   1              uchar port;
+ 677   1              cy--;
+ 678   1              
+ 679   1              p=lbatStateGraph;
+ 680   1              if(cx<4)
+ 681   1              {
+ 682   2                      port=1;
+ 683   2                      s=cx<<4;
+ 684   2              }
+ 685   1              else
+ 686   1              {
+ 687   2                      port=2;
+ 688   2                      s=((cx-4)<<4);
+ 689   2                              
+ 690   2              }
+ 691   1              
+ 692   1              for(page=0;page<2;page++)
+ 693   1              {
+ 694   2                      LCD_WrCmd(port,0xb8+cy*2+page);
+ 695   2                      delayus(100);
+ 696   2                      LCD_WrCmd(port,0x40+s);
+ 697   2                      delayus(100);
+ 698   2                      for(i=0;i<16;i++)
+ 699   2                      {
+ 700   3                              LCD_WrDat(port,*p);
+ 701   3                              delayus(10);
+ 702   3                              p++;
+ 703   3                      }
+ 704   2              }
+ 705   1      } 
+ 706          uchar oldUnderlineX=0,oldUnderlineY=0;
+ 707          void resetUnderline(){
+ 708   1              oldUnderlineX=0;
+ 709   1              oldUnderlineY=0;
+ 710   1      }
+ 711          void DisplayUnderline(unsigned char cx,unsigned char cy,bit display)
+ 712          {
+ 713   1              uchar *p,i,s,page;
+ 714   1              uchar port;
+ 715   1              cy--;
+ 716   1              if(display==0){
+ 717   2              //擦去下划线
+ 718   2              }
+ 719   1              if(oldUnderlineX!=0||oldUnderlineY!=0){ 
+ 720   2                      p=null16x16;
+ 721   2                      if(oldUnderlineX<4)
+ 722   2                      {
+ 723   3                              port=1;
+ 724   3                              s=oldUnderlineX<<4;
+ 725   3                      }
+ 726   2                      else
+ 727   2                      {
+ 728   3                              port=2;
+ 729   3                              s=((oldUnderlineX-4)<<4);
+ 730   3                              
+ 731   3                      }
+ 732   2              
+ 733   2                      for(page=0;page<2;page++)
+ 734   2                      {
+ 735   3                              LCD_WrCmd(port,0xb8+oldUnderlineY*2+page);
+ 736   3                              delayus(100);
+ 737   3                              LCD_WrCmd(port,0x40+s);
+C51 COMPILER V9.01   LCD12864                                                              01/18/2014 17:49:22 PAGE 13  
+
+ 738   3                              delayus(100);
+ 739   3                              for(i=0;i<16;i++)
+ 740   3                              {
+ 741   4                                      LCD_WrDat(port,*p);
+ 742   4                                      delayus(10);
+ 743   4                                      p++;
+ 744   4                              }
+ 745   3                      }
+ 746   2              }
+ 747   1              oldUnderlineX=cx;
+ 748   1              oldUnderlineY=cy;
+ 749   1              p=underline16x16;
+ 750   1              if(cx<4)
+ 751   1              {
+ 752   2                      port=1;
+ 753   2                      s=cx<<4;
+ 754   2              }
+ 755   1              else
+ 756   1              {
+ 757   2                      port=2;
+ 758   2                      s=((cx-4)<<4);
+ 759   2                              
+ 760   2              }
+ 761   1              
+ 762   1              for(page=0;page<2;page++)
+ 763   1              {
+ 764   2                      LCD_WrCmd(port,0xb8+cy*2+page);
+ 765   2                      delayus(100);
+ 766   2                      LCD_WrCmd(port,0x40+s);
+ 767   2                      delayus(100);
+ 768   2                      for(i=0;i<16;i++)
+ 769   2                      {
+ 770   3                              LCD_WrDat(port,*p);
+ 771   3                              delayus(10);
+ 772   3                              p++;
+ 773   3                      }
+ 774   2              }
+ 775   1      }   
+ 776          
+ 777          void LCD_PutPosition(unsigned char x,unsigned char y)
+ 778          { 
+ 779   1        DisplayUnderline(x,y+1,1);
+ 780   1       
+ 781   1      }
+ 782          void ClrScreen()
+ 783          { 
+ 784   1         LCD_DispFill(0x00);
+ 785   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   4074    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    623     165
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

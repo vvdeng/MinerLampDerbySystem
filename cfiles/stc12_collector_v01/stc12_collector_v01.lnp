@@ -1,0 +1,7 @@
+"insideStorage.obj",
+"main.obj",
+"lcdhz12864.obj",
+"useful.obj",
+"config.obj" 
+TO "stc12_collector_v01" 
+RAMSIZE(256) 

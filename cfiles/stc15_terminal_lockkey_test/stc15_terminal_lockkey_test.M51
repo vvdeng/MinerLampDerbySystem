@@ -1,0 +1,114 @@
+BL51 BANKED LINKER/LOCATER V6.22                                                        02/11/2014  13:39:07  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22, INVOKED BY:
+D:\KEIL4\C51\BIN\BL51.EXE main.obj, useful.obj TO stc15_terminal_lockkey_test RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  main.obj (MAIN)
+  useful.obj (USEFUL)
+  D:\KEIL4\C51\LIB\C51S.LIB (?C_STARTUP)
+
+
+LINK MAP OF MODULE:  stc15_terminal_lockkey_test (MAIN)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            IDATA   0008H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     0003H     ABSOLUTE     
+            CODE    0003H     0029H     UNIT         ?PR?MAIN?MAIN
+            CODE    002CH     0017H     UNIT         ?PR?_DELAYMS?USEFUL
+            CODE    0043H     0015H     UNIT         ?PR?_DELAYUS?USEFUL
+            CODE    0058H     000CH     UNIT         ?C_C51STARTUP
+
+
+
+OVERLAY MAP OF MODULE:   stc15_terminal_lockkey_test (MAIN)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+---------------------
+?C_C51STARTUP
+  +--> ?PR?MAIN?MAIN
+
+?PR?MAIN?MAIN
+  +--> ?PR?_DELAYMS?USEFUL
+
+?PR?_DELAYMS?USEFUL
+  +--> ?PR?_DELAYUS?USEFUL
+
+
+
+SYMBOL TABLE OF MODULE:  stc15_terminal_lockkey_test (MAIN)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        MAIN
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:00CAH         PUBLIC        P5M0
+  D:00C9H         PUBLIC        P5M1
+BL51 BANKED LINKER/LOCATER V6.22                                                      02/11/2014  13:39:07  PAGE 2
+
+
+  D:00C0H         PUBLIC        P4
+  D:00C8H         PUBLIC        P5
+  C:0003H         PUBLIC        main
+  B:00C0H.2       PUBLIC        ledTest
+  B:00C8H.5       PUBLIC        p55
+  -------         PROC          MAIN
+  C:0003H         LINE#         9
+  C:0003H         LINE#         10
+  C:0006H         LINE#         11
+  C:0009H         LINE#         12
+  C:000BH         LINE#         13
+  C:000DH         LINE#         14
+  C:000DH         LINE#         15
+  C:0014H         LINE#         16
+  C:0016H         LINE#         17
+  C:0018H         LINE#         18
+  C:001FH         LINE#         19
+  C:0021H         LINE#         21
+  C:0028H         LINE#         22
+  C:002AH         LINE#         24
+  -------         ENDPROC       MAIN
+  -------         ENDMOD        MAIN
+
+  -------         MODULE        USEFUL
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  C:002CH         PUBLIC        _delayMs
+  C:004EH         PUBLIC        _delayUs
+  -------         PROC          L?0009
+  -------         ENDPROC       L?0009
+  -------         PROC          _DELAYUS
+  D:0006H         SYMBOL        t
+  C:004EH         LINE#         2
+  C:004EH         LINE#         3
+  C:0057H         LINE#         5
+  -------         ENDPROC       _DELAYUS
+  -------         PROC          _DELAYMS
+  D:0004H         SYMBOL        t
+  C:002CH         LINE#         7
+  C:0030H         LINE#         9
+  C:003AH         LINE#         11
+  C:003AH         LINE#         12
+  C:003DH         LINE#         13
+  C:003DH         LINE#         14
+  C:0040H         LINE#         15
+  C:0042H         LINE#         17
+  -------         ENDPROC       _DELAYMS
+  -------         ENDMOD        USEFUL
+
+Program Size: data=9.0 xdata=0 code=100
+LINK/LOCATE RUN COMPLETE.  0 WARNING(S),  0 ERROR(S)

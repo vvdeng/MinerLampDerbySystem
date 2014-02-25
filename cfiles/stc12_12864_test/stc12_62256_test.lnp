@@ -1,0 +1,4 @@
+"lcd12864.obj",
+"main.obj" 
+TO "stc12_62256_test" 
+RAMSIZE(256) 

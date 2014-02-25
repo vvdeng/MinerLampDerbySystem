@@ -1,0 +1,132 @@
+BL51 BANKED LINKER/LOCATER V6.22                                                        01/24/2014  10:46:31  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22, INVOKED BY:
+D:\KEIL4\C51\BIN\BL51.EXE main.obj, useful.obj TO stc12_yuyin_test RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  main.obj (MAIN)
+  useful.obj (USEFUL)
+  D:\KEIL4\C51\LIB\C51S.LIB (?C_STARTUP)
+
+
+LINK MAP OF MODULE:  stc12_yuyin_test (MAIN)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            IDATA   0008H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     0003H     ABSOLUTE     
+            CODE    0003H     0036H     UNIT         ?PR?YUYIN?MAIN
+            CODE    0039H     0018H     UNIT         ?PR?_DELAYMS?USEFUL
+            CODE    0051H     0015H     UNIT         ?PR?MAIN?MAIN
+            CODE    0066H     000CH     UNIT         ?C_C51STARTUP
+            CODE    0072H     000AH     UNIT         ?PR?_DELAYUS?USEFUL
+
+
+
+OVERLAY MAP OF MODULE:   stc12_yuyin_test (MAIN)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+---------------------
+?C_C51STARTUP
+  +--> ?PR?MAIN?MAIN
+
+?PR?MAIN?MAIN
+  +--> ?PR?_DELAYMS?USEFUL
+  +--> ?PR?YUYIN?MAIN
+
+?PR?_DELAYMS?USEFUL
+  +--> ?PR?_DELAYUS?USEFUL
+
+?PR?YUYIN?MAIN
+  +--> ?PR?_DELAYUS?USEFUL
+
+
+
+SYMBOL TABLE OF MODULE:  stc12_yuyin_test (MAIN)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+BL51 BANKED LINKER/LOCATER V6.22                                                      01/24/2014  10:46:31  PAGE 2
+
+
+
+  -------         MODULE        MAIN
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0090H         PUBLIC        P1
+  D:00A0H         PUBLIC        P2
+  D:00B0H         PUBLIC        P3
+  D:00A8H         PUBLIC        IE
+  D:00B8H         PUBLIC        IP
+  C:0051H         PUBLIC        main
+  D:0098H         PUBLIC        SCON
+  D:0088H         PUBLIC        TCON
+  B:00A0H.2       PUBLIC        dat
+  C:0003H         PUBLIC        yuyin
+  B:00A0H.0       PUBLIC        ledTest
+  B:00A0H.1       PUBLIC        rst
+  D:00C8H         PUBLIC        T2CON
+  D:00D0H         PUBLIC        PSW
+  -------         PROC          YUYIN
+  C:0003H         LINE#         9
+  C:0003H         LINE#         11
+  C:0005H         LINE#         12
+  C:000CH         LINE#         14
+  C:000EH         LINE#         16
+  C:0015H         LINE#         18
+  C:0017H         LINE#         20
+  C:001EH         LINE#         21
+  C:0020H         LINE#         23
+  C:0027H         LINE#         25
+  C:0029H         LINE#         27
+  C:0030H         LINE#         28
+  C:0032H         LINE#         30
+  -------         ENDPROC       YUYIN
+  -------         PROC          MAIN
+  C:0051H         LINE#         35
+  C:0051H         LINE#         39
+  C:0058H         LINE#         40
+  C:005AH         LINE#         42
+  C:005AH         LINE#         43
+  C:0061H         LINE#         45
+  C:0064H         LINE#         46
+  -------         ENDPROC       MAIN
+  -------         ENDMOD        MAIN
+
+  -------         MODULE        USEFUL
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  C:0039H         PUBLIC        _delayMs
+  C:0072H         PUBLIC        _delayUs
+  -------         PROC          _DELAYUS
+  D:0006H         SYMBOL        t
+  C:0072H         LINE#         2
+  C:0072H         LINE#         3
+  C:007BH         LINE#         5
+  -------         ENDPROC       _DELAYUS
+  -------         PROC          _DELAYMS
+  D:0004H         SYMBOL        t
+  C:0039H         LINE#         7
+  C:003DH         LINE#         9
+BL51 BANKED LINKER/LOCATER V6.22                                                      01/24/2014  10:46:31  PAGE 3
+
+
+  C:0047H         LINE#         11
+  C:004EH         LINE#         13
+  C:0050H         LINE#         15
+  -------         ENDPROC       _DELAYMS
+  -------         ENDMOD        USEFUL
+
+Program Size: data=9.0 xdata=0 code=124
+LINK/LOCATE RUN COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,525 @@
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE main.C BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /* Õë¶ÔÒº¾§Ä£¿éÐÍºÅ£ºmini12864 
+   2             ´®ÐÐ½Ó¿Ú£¬
+   3             ´øÖÐÎÄ×Ö¿âIC£ºÊúÖÃºáÅÅ
+   4             Çý¶¯ICÊÇ:ST7565R(or compatible)
+   5          */
+   6          #include <reg52.H>
+   7          #include <intrins.h>
+   8          sfr P0M1=0x93;
+   9          sfr P0M0=0x94;
+  10          sbit lcd_sclk=P0^0;  /*½Ó¿Ú¶¨Òå:lcd_sclk¾ÍÊÇLCDµÄsclk*/
+  11          sbit lcd_sid=P0^1;   /*½Ó¿Ú¶¨Òå:lcd_sid¾ÍÊÇLCDµÄsid*/
+  12          sbit lcd_rs=P2^6;    /*½Ó¿Ú¶¨Òå:lcd_rs¾ÍÊÇLCDµÄA0*/
+  13          sbit lcd_reset=P2^5; /*½Ó¿Ú¶¨Òå:lcd_reset¾ÍÊÇLCDµÄreset*/
+  14          sbit lcd_cs1=P2^4;   /*½Ó¿Ú¶¨Òå:lcd_cs1¾ÍÊÇLCDµÄcs1*/
+  15          
+  16          sbit Rom_IN=P0^3;    /*×Ö¿âIC½Ó¿Ú¶¨Òå:Rom_IN¾ÍÊÇ×Ö¿âICµÄSI*/
+  17          sbit Rom_OUT=P0^2;   /*×Ö¿âIC½Ó¿Ú¶¨Òå:Rom_OUT¾ÍÊÇ×Ö¿âICµÄSO*/
+  18          sbit Rom_SCK=P0^4;   /*×Ö¿âIC½Ó¿Ú¶¨Òå:Rom_SCK¾ÍÊÇ×Ö¿âICµÄSCK*/
+  19          sbit Rom_CS=P0^5;    /*×Ö¿âIC½Ó¿Ú¶¨ÒåRom_CS¾ÍÊÇ×Ö¿âICµÄCS#*/
+  20          
+  21          
+  22          #define uchar unsigned char 
+  23          #define uint unsigned int
+  24          #define ulong unsigned long
+  25          
+  26          uchar code bmp1[];
+  27          
+  28          uchar code jiong1[]={/*--  ÎÄ×Ö:  ‡å  --*/
+  29          /*--  ËÎÌå12;  ´Ë×ÖÌåÏÂ¶ÔÓ¦µÄµãÕóÎª£º¿íx¸ß=16x16   --*/
+  30          0x00,0xFE,0x82,0x42,0xA2,0x9E,0x8A,0x82,0x86,0x8A,0xB2,0x62,0x02,0xFE,0x00,0x00,
+  31          0x00,0x7F,0x40,0x40,0x7F,0x40,0x40,0x40,0x40,0x40,0x7F,0x40,0x40,0x7F,0x00,0x00};
+  32          
+  33          uchar code lei1[]={/*--  ÎÄ×Ö:  ®š  --*/
+  34          /*--  ËÎÌå12;  ´Ë×ÖÌåÏÂ¶ÔÓ¦µÄµãÕóÎª£º¿íx¸ß=16x16   --*/
+  35          0x80,0x80,0x80,0xBF,0xA5,0xA5,0xA5,0x3F,0xA5,0xA5,0xA5,0xBF,0x80,0x80,0x80,0x00,
+  36          0x7F,0x24,0x24,0x3F,0x24,0x24,0x7F,0x00,0x7F,0x24,0x24,0x3F,0x24,0x24,0x7F,0x00};
+  37          
+  38          
+  39          /*Ð´Ö¸Áîµ½LCDÄ£¿é*/
+  40          void transfer_command_lcd(int data1)   
+  41          {
+  42   1              char i;
+  43   1              lcd_rs=0;
+  44   1              for(i=0;i<8;i++)
+  45   1         {
+  46   2                      lcd_sclk=0;
+  47   2                      if(data1&0x80) lcd_sid=1;
+  48   2                      else lcd_sid=0;
+  49   2                      lcd_sclk=1;
+  50   2                      data1=data1<<=1;
+  51   2         }
+  52   1      }
+  53          
+  54          /*Ð´Êý¾Ýµ½LCDÄ£¿é*/
+  55          void transfer_data_lcd(int data1)
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 2   
+
+  56          {
+  57   1              char i;
+  58   1              lcd_rs=1;
+  59   1              for(i=0;i<8;i++)
+  60   1         {
+  61   2                      lcd_sclk=0;
+  62   2                      if(data1&0x80) lcd_sid=1;
+  63   2                      else lcd_sid=0;
+  64   2                      lcd_sclk=1;
+  65   2                      data1=data1<<=1;
+  66   2         }
+  67   1      }
+  68          
+  69          /*ÑÓÊ±*/
+  70          void delay(int n_ms)               
+  71          {
+  72   1       int j,k;
+  73   1       for(j=0;j<n_ms;j++)
+  74   1       for(k=0;k<1100;k++);
+  75   1      }
+  76          
+  77          
+  78          /*LCDÄ£¿é³õÊ¼»¯*/
+  79          void initial_lcd()
+  80          {
+  81   1              lcd_cs1=0;
+  82   1              Rom_CS = 1;
+  83   1              lcd_reset=0;        /*µÍµçÆ½¸´Î»*/
+  84   1              delay(20);
+  85   1              lcd_reset=1;                /*¸´Î»Íê±Ï*/
+  86   1              delay(20);        
+  87   1              transfer_command_lcd(0xe2);      /*Èí¸´Î»*/
+  88   1              delay(5);
+  89   1              transfer_command_lcd(0x2c);  /*ÉýÑ¹²½¾Û1*/
+  90   1              delay(5);       
+  91   1              transfer_command_lcd(0x2e);  /*ÉýÑ¹²½¾Û2*/
+  92   1              delay(5);
+  93   1              transfer_command_lcd(0x2f);  /*ÉýÑ¹²½¾Û3*/
+  94   1              delay(5);
+  95   1              transfer_command_lcd(0x23);  /*´Öµ÷¶Ô±È¶È£¬¿ÉÉèÖÃ·¶Î§0x20¡«0x27*/
+  96   1              transfer_command_lcd(0x81);  /*Î¢µ÷¶Ô±È¶È*/
+  97   1              transfer_command_lcd(0x2f);  /*0x28,Î¢µ÷¶Ô±È¶ÈµÄÖµ£¬¿ÉÉèÖÃ·¶Î§0x00¡«0x3f*/
+  98   1              transfer_command_lcd(0xa2);  /*1/9Æ«Ñ¹±È£¨bias£©*/
+  99   1              transfer_command_lcd(0xc8);  /*ÐÐÉ¨ÃèË³Ðò£º´ÓÉÏµ½ÏÂ*/
+ 100   1              transfer_command_lcd(0xa0);  /*ÁÐÉ¨ÃèË³Ðò£º´Ó×óµ½ÓÒ*/
+ 101   1              transfer_command_lcd(0x40);  /*ÆðÊ¼ÐÐ£ºµÚÒ»ÐÐ¿ªÊ¼*/
+ 102   1              transfer_command_lcd(0xaf);  /*¿ªÏÔÊ¾*/
+ 103   1              lcd_cs1=1;
+ 104   1      }
+ 105          
+ 106          void lcd_address(uint page,uint column)
+ 107          {
+ 108   1      
+ 109   1              column=column-0x01;
+ 110   1              transfer_command_lcd(0xb0+page-1);   /*ÉèÖÃÒ³µØÖ·*/
+ 111   1              transfer_command_lcd(0x10+(column>>4&0x0f));    /*ÉèÖÃÁÐµØÖ·µÄ¸ß4Î»*/
+ 112   1              transfer_command_lcd(column&0x0f);      /*ÉèÖÃÁÐµØÖ·µÄµÍ4Î»*/   
+ 113   1      }
+ 114          
+ 115          /*È«ÆÁÇåÆÁ*/
+ 116          void clear_screen()
+ 117          {
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 3   
+
+ 118   1              unsigned char i,j;
+ 119   1              lcd_cs1=0;
+ 120   1              Rom_CS = 1;     
+ 121   1              for(i=0;i<9;i++)
+ 122   1              {
+ 123   2                      transfer_command_lcd(0xb0+i);
+ 124   2                      transfer_command_lcd(0x10);
+ 125   2                      transfer_command_lcd(0x00);
+ 126   2                      for(j=0;j<132;j++)
+ 127   2                      {
+ 128   3                              transfer_data_lcd(0x00);
+ 129   3                      }
+ 130   2              }
+ 131   1              lcd_cs1=1;
+ 132   1      }
+ 133          
+ 134          /*ÏÔÊ¾128x64µãÕóÍ¼Ïñ*/
+ 135          void display_128x64(uchar *dp)
+ 136          {
+ 137   1              uint i,j;
+ 138   1              lcd_cs1=0;
+ 139   1              for(j=0;j<8;j++)
+ 140   1              {
+ 141   2                      lcd_address(j+1,1);
+ 142   2                      for (i=0;i<128;i++)
+ 143   2                      {       
+ 144   3                              transfer_data_lcd(*dp);                                 /*Ð´Êý¾Ýµ½LCD,Ã¿Ð´ÍêÒ»¸ö8Î»µÄÊý¾ÝºóÁÐµØÖ·×Ô¶¯¼Ó1*/
+ 145   3                              dp++;
+ 146   3                      }
+ 147   2              }
+ 148   1              lcd_cs1=1;
+ 149   1      }
+ 150          
+ 151          
+ 152          /*ÏÔÊ¾16x16µãÕóÍ¼Ïñ¡¢ºº×Ö¡¢ÉúÆ§×Ö»ò16x16µãÕóµÄÆäËûÍ¼±ê*/
+ 153          void display_graphic_16x16(uint page,uint column,uchar *dp)
+ 154          {
+ 155   1              uint i,j;
+ 156   1              lcd_cs1=0;
+ 157   1              Rom_CS = 1;     
+ 158   1              for(j=0;j<2;j++)
+ 159   1              {
+ 160   2                      lcd_address(page+j,column);
+ 161   2                      for (i=0;i<16;i++)
+ 162   2                      {       
+ 163   3                              transfer_data_lcd(*dp);                                 /*Ð´Êý¾Ýµ½LCD,Ã¿Ð´ÍêÒ»¸ö8Î»µÄÊý¾ÝºóÁÐµØÖ·×Ô¶¯¼Ó1*/
+ 164   3                              dp++;
+ 165   3                      }
+ 166   2              }
+ 167   1              lcd_cs1=1;
+ 168   1      }
+ 169          
+ 170          
+ 171          /*ÏÔÊ¾8x16µãÕóÍ¼Ïñ¡¢ASCII, »ò8x16µãÕóµÄ×ÔÔì×Ö·û¡¢ÆäËûÍ¼±ê*/
+ 172          void display_graphic_8x16(uint page,uchar column,uchar *dp)
+ 173          {
+ 174   1              uint i,j;
+ 175   1              lcd_cs1=0;      
+ 176   1              for(j=0;j<2;j++)
+ 177   1              {
+ 178   2                      lcd_address(page+j,column);
+ 179   2                      for (i=0;i<8;i++)
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 4   
+
+ 180   2                      {       
+ 181   3                              transfer_data_lcd(*dp);                                 /*Ð´Êý¾Ýµ½LCD,Ã¿Ð´ÍêÒ»¸ö8Î»µÄÊý¾ÝºóÁÐµØÖ·×Ô¶¯¼Ó1*/
+ 182   3                              dp++;
+ 183   3                      }
+ 184   2              }
+ 185   1              lcd_cs1=1;
+ 186   1      }
+ 187          
+ 188          
+ 189          /*ÏÔÊ¾5*7µãÕóÍ¼Ïñ¡¢ASCII, »ò5x7µãÕóµÄ×ÔÔì×Ö·û¡¢ÆäËûÍ¼±ê*/
+ 190          void display_graphic_5x7(uint page,uchar column,uchar *dp)
+ 191          {
+ 192   1              uint col_cnt;
+ 193   1              uchar page_address;
+ 194   1              uchar column_address_L,column_address_H;
+ 195   1              page_address = 0xb0+page-1;
+ 196   1              
+ 197   1              lcd_cs1=0;      
+ 198   1              
+ 199   1              column_address_L =(column&0x0f)-1;
+ 200   1              column_address_H =((column>>4)&0x0f)+0x10;
+ 201   1              
+ 202   1              transfer_command_lcd(page_address);             /*Set Page Address*/
+ 203   1              transfer_command_lcd(column_address_H); /*Set MSB of column Address*/
+ 204   1              transfer_command_lcd(column_address_L); /*Set LSB of column Address*/
+ 205   1              
+ 206   1              for (col_cnt=0;col_cnt<6;col_cnt++)
+ 207   1              {       
+ 208   2                      transfer_data_lcd(*dp);
+ 209   2                      dp++;
+ 210   2              }
+ 211   1              lcd_cs1=1;
+ 212   1      }
+ 213          
+ 214          /****ËÍÖ¸Áîµ½×Ö¿âIC***/
+ 215          void send_command_to_ROM( uchar datu )
+ 216          {
+ 217   1              uchar i;
+ 218   1              for(i=0;i<8;i++ )
+ 219   1              {
+ 220   2                      if(datu&0x80)
+ 221   2                              Rom_IN = 1;
+ 222   2                      else
+ 223   2                              Rom_IN = 0;
+ 224   2                              datu = datu<<1;
+ 225   2                              Rom_SCK=0;
+ 226   2                              Rom_SCK=1;
+ 227   2              }
+ 228   1      }
+ 229          
+ 230          /****´Ó×Ö¿âICÖÐÈ¡ºº×Ö»ò×Ö·ûÊý¾Ý£¨1¸ö×Ö½Ú£©***/
+ 231          static uchar get_data_from_ROM( )
+ 232          {
+ 233   1              
+ 234   1              uchar i;
+ 235   1              uchar ret_data=0;
+ 236   1              Rom_SCK=1;
+ 237   1              for(i=0;i<8;i++)
+ 238   1              {
+ 239   2                      Rom_OUT=1;
+ 240   2                      Rom_SCK=0;
+ 241   2                      ret_data=ret_data<<1;
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 5   
+
+ 242   2                      if( Rom_OUT )
+ 243   2                              ret_data=ret_data+1;
+ 244   2                      else
+ 245   2                              ret_data=ret_data+0;
+ 246   2                      Rom_SCK=1;
+ 247   2              }
+ 248   1              return(ret_data);
+ 249   1      }
+ 250          
+ 251          
+ 252          
+ 253          /*´ÓÏà¹ØµØÖ·£¨addrHigh£ºµØÖ·¸ß×Ö½Ú,addrMid£ºµØÖ·ÖÐ×Ö½Ú,addrLow£ºµØÖ·µÍ×Ö½Ú£©ÖÐÁ¬Ðø¶Á³öDataLen¸ö×Ö½ÚµÄÊý¾Ýµ
+             -½ pBuffµÄµØÖ·*/
+ 254          /*Á¬Ðø¶ÁÈ¡*/
+ 255          void get_n_bytes_data_from_ROM(uchar addrHigh,uchar addrMid,uchar addrLow,uchar *pBuff,uchar DataLen )
+ 256          {
+ 257   1              uchar i;
+ 258   1              Rom_CS = 0;
+ 259   1              lcd_cs1=1;      
+ 260   1              Rom_SCK=0;
+ 261   1              send_command_to_ROM(0x03);
+ 262   1              send_command_to_ROM(addrHigh);
+ 263   1              send_command_to_ROM(addrMid);
+ 264   1              send_command_to_ROM(addrLow);
+ 265   1              for(i = 0; i < DataLen; i++ )
+ 266   1                   *(pBuff+i) =get_data_from_ROM();
+ 267   1              Rom_CS = 1;
+ 268   1      }
+ 269          
+ 270          
+ 271          /******************************************************************/
+ 272          
+ 273          ulong  fontaddr=0;
+ 274          void display_GB2312_string(uchar y,uchar x,uchar *text)
+ 275          {
+ 276   1              uchar i= 0;
+ 277   1              uchar addrHigh,addrMid,addrLow ;
+ 278   1              uchar fontbuf[32];                      
+ 279   1              while((text[i]>0x00))
+ 280   1              {
+ 281   2                      if(((text[i]>=0xb0) &&(text[i]<=0xf7))&&(text[i+1]>=0xa1))
+ 282   2                      {                                               
+ 283   3                              /*¹ú±ê¼òÌå£¨GB2312£©ºº×ÖÔÚ×Ö¿âICÖÐµÄµØÖ·ÓÉÒÔÏÂ¹«Ê½À´¼ÆËã£º*/
+ 284   3                              /*Address = ((MSB - 0xB0) * 94 + (LSB - 0xA1)+ 846)*32+ BaseAdd;BaseAdd=0*/
+ 285   3                              /*ÓÉÓÚµ£ÐÄ8Î»µ¥Æ¬»úÓÐ³Ë·¨Òç³öÎÊÌâ£¬ËùÒÔ·ÖÈý²¿È¡µØÖ·*/
+ 286   3                              fontaddr = (text[i]- 0xb0)*94; 
+ 287   3                              fontaddr += (text[i+1]-0xa1)+846;
+ 288   3                              fontaddr = (ulong)(fontaddr*32);
+ 289   3                              
+ 290   3                              addrHigh = (fontaddr&0xff0000)>>16;  /*µØÖ·µÄ¸ß8Î»,¹²24Î»*/
+ 291   3                              addrMid = (fontaddr&0xff00)>>8;      /*µØÖ·µÄÖÐ8Î»,¹²24Î»*/
+ 292   3                              addrLow = fontaddr&0xff;             /*µØÖ·µÄµÍ8Î»,¹²24Î»*/
+ 293   3                              get_n_bytes_data_from_ROM(addrHigh,addrMid,addrLow,fontbuf,32 );/*È¡32¸ö×Ö½ÚµÄÊý¾Ý£¬´æµ½"fontbuf[32]"*/
+ 294   3                              display_graphic_16x16(y,x,fontbuf);/*ÏÔÊ¾ºº×Öµ½LCDÉÏ£¬yÎªÒ³µØÖ·£¬xÎªÁÐµØÖ·£¬fontbuf[]ÎªÊý¾Ý*/
+ 295   3                              i+=2;
+ 296   3                              x+=16;
+ 297   3                      }
+ 298   2                      else if(((text[i]>=0xa1) &&(text[i]<=0xa3))&&(text[i+1]>=0xa1))
+ 299   2                      {                                               
+ 300   3                              /*¹ú±ê¼òÌå£¨GB2312£©15x16µãµÄ×Ö·ûÔÚ×Ö¿âICÖÐµÄµØÖ·ÓÉÒÔÏÂ¹«Ê½À´¼ÆËã£º*/
+ 301   3                              /*Address = ((MSB - 0xa1) * 94 + (LSB - 0xA1))*32+ BaseAdd;BaseAdd=0*/
+ 302   3                              /*ÓÉÓÚµ£ÐÄ8Î»µ¥Æ¬»úÓÐ³Ë·¨Òç³öÎÊÌâ£¬ËùÒÔ·ÖÈý²¿È¡µØÖ·*/
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 6   
+
+ 303   3                              fontaddr = (text[i]- 0xa1)*94; 
+ 304   3                              fontaddr += (text[i+1]-0xa1);
+ 305   3                              fontaddr = (ulong)(fontaddr*32);
+ 306   3                              
+ 307   3                              addrHigh = (fontaddr&0xff0000)>>16;  /*µØÖ·µÄ¸ß8Î»,¹²24Î»*/
+ 308   3                              addrMid = (fontaddr&0xff00)>>8;      /*µØÖ·µÄÖÐ8Î»,¹²24Î»*/
+ 309   3                              addrLow = fontaddr&0xff;             /*µØÖ·µÄµÍ8Î»,¹²24Î»*/
+ 310   3                              get_n_bytes_data_from_ROM(addrHigh,addrMid,addrLow,fontbuf,32 );/*È¡32¸ö×Ö½ÚµÄÊý¾Ý£¬´æµ½"fontbuf[32]"*/
+ 311   3                              display_graphic_16x16(y,x,fontbuf);/*ÏÔÊ¾ºº×Öµ½LCDÉÏ£¬yÎªÒ³µØÖ·£¬xÎªÁÐµØÖ·£¬fontbuf[]ÎªÊý¾Ý*/
+ 312   3                              i+=2;
+ 313   3                              x+=16;
+ 314   3                      }
+ 315   2                      else if((text[i]>=0x20) &&(text[i]<=0x7e))      
+ 316   2                      {                                               
+ 317   3                              unsigned char fontbuf[16];                      
+ 318   3                              fontaddr = (text[i]- 0x20);
+ 319   3                              fontaddr = (unsigned long)(fontaddr*16);
+ 320   3                              fontaddr = (unsigned long)(fontaddr+0x3cf80);                   
+ 321   3                              addrHigh = (fontaddr&0xff0000)>>16;
+ 322   3                              addrMid = (fontaddr&0xff00)>>8;
+ 323   3                              addrLow = fontaddr&0xff;
+ 324   3      
+ 325   3                              get_n_bytes_data_from_ROM(addrHigh,addrMid,addrLow,fontbuf,16 );/*È¡16¸ö×Ö½ÚµÄÊý¾Ý£¬´æµ½"fontbuf[32]"*/
+ 326   3                              
+ 327   3                              display_graphic_8x16(y,x,fontbuf);/*ÏÔÊ¾8x16µÄASCII×Öµ½LCDÉÏ£¬yÎªÒ³µØÖ·£¬xÎªÁÐµØÖ·£¬fontbuf[]ÎªÊý¾Ý*/
+ 328   3                              i+=1;
+ 329   3                              x+=8;
+ 330   3                      }
+ 331   2                      else
+ 332   2                              i++;    
+ 333   2              }
+ 334   1              
+ 335   1      }
+ 336          
+ 337          void display_string_5x7(uchar y,uchar x,uchar *text)
+ 338          {
+ 339   1              unsigned char i= 0;
+ 340   1              unsigned char addrHigh,addrMid,addrLow ;
+ 341   1              while((text[i]>0x00))
+ 342   1              {
+ 343   2                      
+ 344   2                      if((text[i]>=0x20) &&(text[i]<=0x7e))   
+ 345   2                      {                                               
+ 346   3                              unsigned char fontbuf[8];                       
+ 347   3                              fontaddr = (text[i]- 0x20);
+ 348   3                              fontaddr = (unsigned long)(fontaddr*8);
+ 349   3                              fontaddr = (unsigned long)(fontaddr+0x3bfc0);                   
+ 350   3                              addrHigh = (fontaddr&0xff0000)>>16;
+ 351   3                              addrMid = (fontaddr&0xff00)>>8;
+ 352   3                              addrLow = fontaddr&0xff;
+ 353   3      
+ 354   3                              get_n_bytes_data_from_ROM(addrHigh,addrMid,addrLow,fontbuf,8);/*È¡8¸ö×Ö½ÚµÄÊý¾Ý£¬´æµ½"fontbuf[32]"*/
+ 355   3                              
+ 356   3                              display_graphic_5x7(y,x,fontbuf);/*ÏÔÊ¾5x7µÄASCII×Öµ½LCDÉÏ£¬yÎªÒ³µØÖ·£¬xÎªÁÐµØÖ·£¬fontbuf[]ÎªÊý¾Ý*/
+ 357   3                              i+=1;
+ 358   3                              x+=6;
+ 359   3                      }
+ 360   2                      else
+ 361   2                      i++;    
+ 362   2              }
+ 363   1              
+ 364   1      }
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 7   
+
+ 365          //===============main program===================
+ 366          void main(void)
+ 367          {    
+ 368   1              P0M0=0x0;
+ 369   1              P0M1=0x0; 
+ 370   1              while(1)
+ 371   1              {
+ 372   2                      Rom_CS=1;
+ 373   2                      lcd_cs1=0;
+ 374   2                      initial_lcd();  
+ 375   2                      clear_screen();    //clear all dots
+ 376   2                      display_128x64(bmp1);
+ 377   2                      delay(3000);            
+ 378   2                      display_GB2312_string(1,1,"12864,´øÖÐÎÄ×Ö¿â");  /*ÔÚµÚ1Ò³£¬µÚ1ÁÐ£¬ÏÔÊ¾Ò»´®16x16µãÕóºº×Ö»ò8x16µÄASCII×Ö*/
+ 379   2                      display_GB2312_string(3,1,"16X16¼òÌåºº×Ö¿â,");  /*ÏÔÊ¾Ò»´®16x16µãÕóºº×Ö»ò8x16µÄASCII×Ö.ÒÔÏÂÀ×Í¬*/
+ 380   2                      display_GB2312_string(5,1,"»ò8X16µãÕóASCII,");
+ 381   2                      display_GB2312_string(7,1,"»ò5X7µãÕóASCIIÂë");                  
+ 382   2                      delay(3000);
+ 383   2                      clear_screen(); 
+ 384   2                      display_GB2312_string(1,1,"ÀÊÒëµç×Ó¿Æ¼¼³ÉÁ¢");  
+ 385   2                      display_GB2312_string(3,1,"¶þÁãÁãÁùÄê¡£ÆìÏÂ");  
+ 386   2                      display_GB2312_string(5,1,"ÆßÐÇ³æÆ·ÅÆ×¨×¢ÓÚ");  
+ 387   2                      display_GB2312_string(7,1,"½ÌÓýÉè±¸ÑÐ·¢Éè±¸");  
+ 388   2                      delay(3000);                    
+ 389   2                      display_GB2312_string(1,1,"GB2312¼òÌå×Ö¿â¼°");  
+ 390   2                      display_GB2312_string(3,1,"ÓÐÍ¼ÐÍ¹¦ÄÜ£¬¿É×Ô");  
+ 391   2                      display_GB2312_string(5,1,"±à´ó×Ö»òÍ¼Ïñ»òÉú");  
+ 392   2                      display_GB2312_string(7,1,"Æ§×Ö£¬ÀýÈç£º    ");
+ 393   2                      display_graphic_16x16(7,97,jiong1);                                     /*ÔÚµÚ7Ò³£¬µÚ81ÁÐÏÔÊ¾µ¥¸ö×Ô±àÉúÆ§ºº×Ö¡°‡å¡±*/
+ 394   2                      display_graphic_16x16(7,113,lei1);                                      /*ÏÔÊ¾µ¥¸ö×Ô±àÉúÆ§ºº×Ö"®š¡°*/
+ 395   2                      delay(3000);            
+ 396   2                      clear_screen();                 
+ 397   2                      display_GB2312_string(1,1,"<!@#$%^&*()_-+]/");  /*ÔÚµÚ1Ò³£¬µÚ1ÁÐ£¬ÏÔÊ¾Ò»´®16x16µãÕóºº×Ö»ò8*16µÄASCII×Ö*/
+ 398   2                      display_string_5x7(3,1,"<!@#$%^&*()_-+]/;.,?[");/*ÔÚµÚ3Ò³£¬µÚ1ÁÐ£¬ÏÔÊ¾Ò»´®5x7µãÕóµÄASCII×Ö*/
+ 399   2                      display_string_5x7(4,1,"    I Love My job    ");/*ÏÔÊ¾Ò»´®5x7µãÕóµÄASCII×Ö*/
+ 400   2                      display_string_5x7(5,1,"    qixingchong      ");/*ÏÔÊ¾Ò»´®5x7µãÕóµÄASCII×Ö*/    
+ 401   2                      display_string_5x7(6,1,"   www.doflye.net    ");/*ÏÔÊ¾Ò»´®5x7µãÕóµÄASCII×Ö*/
+ 402   2                      display_string_5x7(7,1,"TEL:025-52158963     ");/*ÏÔÊ¾Ò»´®5x7µãÕóµÄASCII×Ö*/
+ 403   2                      display_string_5x7(8,1,"E-mail:haotun@126.com");/*ÏÔÊ¾Ò»´®5x7µãÕóµÄASCII×Ö*/
+ 404   2                      delay(3000);
+ 405   2                      display_GB2312_string(1,1,"°¡°¢°£°¤°¥°¦°§°¨");  /*ÔÚµÚ1Ò³£¬µÚ1ÁÐ£¬ÏÔÊ¾Ò»´®16x16µãÕóºº×Ö»ò8x16µÄASCII×Ö*/
+ 406   2                      display_GB2312_string(3,1,"°©°ª°«°¬°­°®°¯°°");  /*ÏÔÊ¾Ò»´®16x16µãÕóºº×Ö»ò8x16µÄASCII×Ö.ÒÔÏÂÀ×Í¬*/
+ 407   2                      display_GB2312_string(5,1,"°±°²°³°´°µ°¶°·°¸");
+ 408   2                      display_GB2312_string(7,1,"°¹°º°»°¼°½°¾°¿°À");                  
+ 409   2                      delay(3000);    
+ 410   2                      display_GB2312_string(1,1,"÷ß÷à÷á÷â÷ã÷ä÷å÷æ");
+ 411   2                      display_GB2312_string(3,1,"÷ç÷è÷é÷ê÷ë÷ì÷í÷î");
+ 412   2                      display_GB2312_string(5,1,"÷ï÷ð÷ñ÷ò÷ó÷ô÷õ÷ö");
+ 413   2                      display_GB2312_string(7,1,"÷÷÷ø÷ù÷ú÷û÷ü÷ý÷þ");                  
+ 414   2                      delay(3000);
+ 415   2              }
+ 416   1      }
+ 417          
+ 418          uchar code bmp1[]={
+ 419          
+ 420          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 421          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 422          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 423          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 424          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 425          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 426          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 8   
+
+ 427          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 428          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 429          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 430          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 431          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 432          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 433          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 434          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 435          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 436          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X80,
+ 437          0X80,0X80,0X80,0X80,0X80,0XC0,0XFE,0XFE,0X80,0X80,0X80,0X80,0X80,0X80,0X80,0X80,
+ 438          0X80,0X80,0X80,0X80,0X80,0X80,0X80,0X80,0X80,0X80,0X80,0X00,0X00,0X00,0X00,0XFF,
+ 439          0XFF,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,
+ 440          0XE7,0XE7,0XE7,0XE7,0XE7,0XE7,0XF7,0XFF,0XFE,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 441          0X00,0X00,0X00,0X00,0X00,0X40,0X38,0X38,0X30,0X78,0X7C,0XFC,0XFC,0XFC,0XFC,0XFC,
+ 442          0XFC,0XFC,0XF8,0XF8,0XF8,0XF0,0XF0,0XE0,0XE0,0XC0,0X80,0X00,0X00,0X00,0X00,0X00,
+ 443          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 444          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X03,
+ 445          0X03,0X03,0X03,0X03,0X03,0X03,0XFF,0XFF,0X03,0X03,0X03,0X03,0X03,0X03,0X03,0X03,
+ 446          0X03,0X03,0X03,0X03,0X03,0X03,0X03,0X03,0X03,0X03,0X01,0X00,0X00,0X00,0X00,0X0F,
+ 447          0XFF,0XFE,0XFC,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0XFC,0XFC,0X5C,0X1C,0X1C,0X1C,
+ 448          0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1E,0X0F,0X07,0X00,0X00,0X00,0X80,0XC0,0XE0,0XE0,
+ 449          0XE0,0XE0,0XE0,0XE0,0XE0,0XF8,0XF8,0XF8,0XF8,0XF0,0XE0,0XE0,0XC1,0X07,0X1F,0XFF,
+ 450          0XFB,0XF3,0XFB,0XFF,0XFF,0XFF,0XFF,0XFE,0XFE,0XFC,0XFF,0XFF,0XFC,0XC0,0X00,0X00,
+ 451          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 452          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 453          0X00,0X00,0X00,0X00,0X00,0X00,0XFF,0XFF,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 454          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0XCE,0XEF,
+ 455          0XE7,0XE7,0XE7,0XE6,0XE6,0XE6,0XE6,0XE6,0XE6,0XEF,0XFF,0XFF,0XEF,0XE6,0XE6,0XE6,
+ 456          0XE6,0XE6,0XE6,0XE6,0XE6,0XE6,0XE6,0XE6,0XE6,0X06,0X00,0X00,0X7F,0XFF,0XFF,0XE3,
+ 457          0XE1,0XE1,0XE1,0XE1,0XE1,0XFF,0XFF,0XFF,0XFF,0XE3,0XE1,0XE1,0XE1,0XE3,0XE0,0XF0,
+ 458          0XF3,0XC7,0X0F,0X3F,0X7F,0X7F,0XFF,0XFF,0XEF,0XEF,0XE7,0XFF,0X7F,0X07,0X00,0X00,
+ 459          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 460          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 461          0X00,0X00,0X00,0X00,0X00,0X00,0X0F,0X1F,0X1C,0X3C,0X3C,0X3C,0X3C,0X3C,0X3C,0X3C,
+ 462          0X3C,0X3C,0X3C,0X3C,0X3C,0X3C,0X3C,0X3C,0X3C,0X38,0X10,0X00,0X00,0X00,0X1C,0X1C,
+ 463          0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1D,0X1F,0X1F,0X1D,0X1C,0X1C,0X1C,
+ 464          0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X1C,0X18,0X00,0X00,0X30,0X38,0X38,0X38,
+ 465          0X38,0X38,0X38,0X38,0X38,0X3F,0X3F,0X3F,0X3F,0X3B,0X39,0X38,0X38,0X38,0X38,0X38,
+ 466          0X38,0X38,0X38,0X38,0X38,0X38,0X38,0X38,0X39,0X39,0X3D,0X38,0X00,0X00,0X00,0X00,
+ 467          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 468          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 469          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 470          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 471          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 472          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 473          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 474          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 475          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 476          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 477          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 478          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 479          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 480          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 481          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 482          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 483          0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,0X00,
+ 484          
+ 485          };
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.01   MAIN                                                                  02/21/2014 20:37:34 PAGE 9   
+
+   CODE SIZE        =   1952    ----
+   CONSTANT SIZE    =   1574    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4     112
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

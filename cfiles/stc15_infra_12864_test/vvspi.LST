@@ -1,0 +1,58 @@
+C51 COMPILER V9.00   VVSPI                                                                 01/29/2014 23:17:43 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE VVSPI
+OBJECT MODULE PLACED IN vvspi.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE vvspi.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "vvspi.h"
+   2          
+   3          void init_spi()
+   4          {
+   5   1        ACC = P_SW1;
+   6   1        ACC &= ~(SPI_S0 | SPI_S1);  //SPI_S0=0 SPI_S1=1
+   7   1        ACC |= SPI_S1;              //(P5.4/SS_3, P4.0/MOSI_3, P4.1/MISO_3, P4.3/SCLK_3)
+   8   1        P_SW1 = ACC;  
+   9   1              //SSIG = 1;   //忽略SS脚
+  10   1              //SPEN = 1;   //允许SPI工作
+  11   1              //DORD = 0;   //先传高位MSB
+  12   1              //MSTR = 1;   //设置单片机为主机
+  13   1              SPCTL = 0xD0; //SPI Control Register SSIG SPEN DORD MSTR CPOL CPHA SPR1 SPR0 0000,0100
+  14   1              SPSTAT = 0xC0; //
+  15   1              //IE2 |= 0x02; //允许SPI中断控制位
+  16   1      }
+  17          
+  18          void WriteByte(u8 temp)
+  19          {
+  20   1              SPDAT = temp;
+  21   1              while(!(SPSTAT & 0x80));
+  22   1              SPSTAT = 0xC0;
+  23   1      }
+  24          
+  25          u8 ReadByte(void)
+  26          {
+  27   1              u8 temp;
+  28   1              //SPSTAT = 0xC0;
+  29   1              SPDAT = 0x00;
+  30   1              while(!(SPSTAT & 0x80));
+  31   1              temp = SPDAT;
+  32   1              SPSTAT = 0xC0;
+  33   1              return temp;
+  34   1      }
+  35          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     40    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

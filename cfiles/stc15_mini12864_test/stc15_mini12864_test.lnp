@@ -1,0 +1,4 @@
+"main.obj",
+"vvspi.obj" 
+TO "stc15_mini12864_test" 
+RAMSIZE(256) 

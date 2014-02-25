@@ -1,0 +1,7 @@
+"main.obj",
+"useful.obj",
+"lcd12864.obj",
+"vvspi.obj",
+"hanzi.obj" 
+TO "stc15_comm_s2_test" 
+RAMSIZE(256) 

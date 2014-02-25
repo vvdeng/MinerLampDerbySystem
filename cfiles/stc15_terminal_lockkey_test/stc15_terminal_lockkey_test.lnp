@@ -1,0 +1,4 @@
+"main.obj",
+"useful.obj" 
+TO "stc15_terminal_lockkey_test" 
+RAMSIZE(256) 

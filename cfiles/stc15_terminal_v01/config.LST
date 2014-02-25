@@ -1,0 +1,439 @@
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE CONFIG
+OBJECT MODULE PLACED IN config.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE config.c LARGE BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "config.h"
+   2          #include "lcd12864.h"
+   3          
+   4          
+   5          uchar digiBuf[BITS_COUNT]={0};
+   6          uchar digiDispBuf[BITS_COUNT+1]={0};
+   7          
+   8          uchar  irTime=0;//红外用全局变量
+   9          bit inSetting=0,irProcessFlag=0,irReceiveFlag=0;
+  10          bit startSetting=0;
+  11          uchar IRcord[4];
+  12          uchar irData[33];
+  13          uchar irCount=0;
+  14          uchar setState=SET_STATE_NONE;
+  15          
+  16          uchar configMenuArr[CONFIG_LEN]={CONFIG_ADDR,CONFIG_BRIGHT,CONFIG_BATFULL_DOWN,CONFIG_BATFULL_UP,CONFIG_SO
+             -UND,CONFIG_DEBUG};
+  17          uchar configValueArr[CONFIG_LEN]={0};
+  18          uchar configInitValueArr[CONFIG_LEN]={0,150,20,100,1,0};
+  19          uchar  *  configMenuStrArr[CONFIG_LEN]={"地址设置","亮度阈值","充满下限","充满上限","打开声音","调试"};
+  20          extern bit isInfraredAllowed;  //main.c中定义
+  21          
+  22          void setInfraredFlag(){
+  23   1              isInfraredAllowed=1;
+  24   1      
+  25   1                              
+  26   1              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+  27   1              TH0 = 0xFD;             //设置定时初值
+  28   1              TF0 = 0;                //清除TF0标志
+  29   1              ET0=1; 
+  30   1              TR0=1;          
+  31   1      }
+  32          
+  33          void clearInfraredFlag(){
+  34   1              if(isInfraredAllowed==1){
+  35   2                              isInfraredAllowed=0;
+  36   2          //50ms计时时使用
+  37   2      //      TL0 = 0x00;             //设置定时初值
+  38   2      //      TH0 = 0x4C;             //设置定时初值
+  39   2              //600us计时使用
+  40   2              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+  41   2              TH0 = 0xFD;             //设置定时初值
+  42   2              TR0=1;
+  43   2              }
+  44   1              
+  45   1      }
+  46          
+  47          void showMenuItem(uchar index,bit selected){
+  48   1              ClrScreen();
+  49   1              if(configValueArr[CONFIG_DEBUG]!=0){
+  50   2                      
+  51   2                      LCD_PutString(0,0,"调试");
+  52   2              }
+  53   1              LCD_PutString(3,0,"设置");
+  54   1              LCD_PutString(2,1,configMenuStrArr[index]);
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 2   
+
+  55   1              if(selected){
+  56   2                      LCD_PutChar(1,2,26);//输出"->"
+  57   2              }
+  58   1      } 
+  59          void dispDigit(){
+  60   1              
+  61   1                      
+  62   1                      digiDispBuf[0]='0'+digiBuf[0];
+  63   1                      digiDispBuf[1]='0'+digiBuf[1];
+  64   1                      digiDispBuf[2]='0'+digiBuf[2];
+  65   1                      digiDispBuf[3]='\0';
+  66   1                      LCD_PutString(3,2,digiDispBuf);
+  67   1              
+  68   1      }
+  69          
+  70          uchar  curMenuIndex=0,curSelBit=0;
+  71          void Ir_work(void)
+  72          {
+  73   1              
+  74   1              switch (IRcord[2]){
+  75   2              //600us计时模式下
+  76   2              case IR_CHANNEL:
+  77   2              if(setState==SET_STATE_NONE)
+  78   2              {       
+  79   3                      startSetting=1;
+  80   3              }       
+  81   2              break;
+  82   2      
+  83   2      
+  84   2              case IR_EQ:
+  85   2              
+  86   2              if(setState==SET_STATE_INIT){
+  87   3                      setState=SET_STATE_MENU;
+  88   3                      curMenuIndex=0;
+  89   3                      showMenuItem(curMenuIndex,1);
+  90   3                      
+  91   3              }
+  92   2              else if(setState==SET_STATE_MENU){
+  93   3                      setState=SET_STATE_MENU_ITEM_SEL;
+  94   3              
+  95   3                      curSelBit=0;
+  96   3                      
+  97   3                      
+  98   3                      showMenuItem(curMenuIndex,1);
+  99   3                      digiBuf[0]=configValueArr[curMenuIndex]/100;
+ 100   3                      digiBuf[1]=(configValueArr[curMenuIndex]%100)/10;
+ 101   3                      digiBuf[2]=configValueArr[curMenuIndex]%10;
+ 102   3                      dispDigit();
+ 103   3              }
+ 104   2              else if(setState==SET_STATE_MENU_ITEM_SEL){
+ 105   3                      setState=SET_STATE_MENU_ITEM_BIT_SEL;
+ 106   3                      showMenuItem(curMenuIndex,0);
+ 107   3                      LCD_PutChar(2,3,26);//输出"->"
+ 108   3                      dispDigit();
+ 109   3                      curSelBit=0;
+ 110   3                      LCD_PutPosition(3+curSelBit,3);
+ 111   3              }
+ 112   2              else if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 113   3                      if(curMenuIndex==CONFIG_EXIT){
+ 114   4                              setState=SET_STATE_NONE;
+ 115   4                              
+ 116   4                              inSetting=0;                    
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 3   
+
+ 117   4                      }
+ 118   3                      else{
+ 119   4                              configValueArr[curMenuIndex]=digiBuf[0]*100+digiBuf[1]*10+digiBuf[2];
+ 120   4                              saveConfig();
+ 121   4                              LCD_PutString(2,3,"设置完毕!");
+ 122   4                              setState=SET_STATE_MENU_ITEM_FINISHED;
+ 123   4                      
+ 124   4                      
+ 125   4                      }
+ 126   3              }               
+ 127   2      
+ 128   2                      
+ 129   2              break;
+ 130   2              case IR_CHANNEL_MINUS:
+ 131   2              if(setState==SET_STATE_MENU||setState==SET_STATE_INIT){
+ 132   3                      setState=SET_STATE_NONE;
+ 133   3                      
+ 134   3                      clearInfraredFlag();
+ 135   3              
+ 136   3                      ClrScreen();//强行清屏  
+ 137   3                      inSetting=0;
+ 138   3                      redisplayStaffInfoIfNecessary(1);
+ 139   3              }
+ 140   2              else if(setState==SET_STATE_MENU_ITEM_SEL){
+ 141   3                      setState=SET_STATE_MENU;
+ 142   3                      showMenuItem(curMenuIndex,1);
+ 143   3              
+ 144   3              }
+ 145   2              else if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 146   3                      setState=SET_STATE_MENU;
+ 147   3                      showMenuItem(curMenuIndex,1);
+ 148   3              }
+ 149   2              else if(setState==SET_STATE_MENU_ITEM_FINISHED){
+ 150   3                      setState=SET_STATE_MENU_ITEM_BIT_SEL;
+ 151   3                      showMenuItem(curMenuIndex,0);
+ 152   3                      LCD_PutChar(2,3,26);//输出"->"
+ 153   3                      dispDigit();
+ 154   3                      curSelBit=0;
+ 155   3      
+ 156   3                      LCD_PutPosition(3+curSelBit,3);
+ 157   3              }
+ 158   2              break;
+ 159   2              case IR_NEXT:
+ 160   2              if(setState==SET_STATE_MENU){
+ 161   3                      
+ 162   3                      curMenuIndex=(curMenuIndex+1)%CONFIG_LEN;
+ 163   3              //      curMenu=curMenuArr[curMenuIndex];
+ 164   3                      showMenuItem(curMenuIndex,1);
+ 165   3                      
+ 166   3              }
+ 167   2              else if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 168   3                      curSelBit=(curSelBit+1)%BITS_COUNT; 
+ 169   3                      LCD_PutPosition(3+curSelBit,3);
+ 170   3      
+ 171   3              
+ 172   3                      
+ 173   3              }
+ 174   2              break;
+ 175   2              case IR_PREV:
+ 176   2              if(setState==SET_STATE_MENU){
+ 177   3                      
+ 178   3                      curMenuIndex=(curMenuIndex+CONFIG_LEN-1)%CONFIG_LEN;
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 4   
+
+ 179   3              //      curMenu=curMenuArr[curMenuIndex];
+ 180   3                      showMenuItem(curMenuIndex,1);
+ 181   3                      
+ 182   3              }
+ 183   2              else if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 184   3                      curSelBit=(curSelBit+BITS_COUNT-1)%BITS_COUNT;
+ 185   3                      LCD_PutPosition(3+curSelBit,3);
+ 186   3                      
+ 187   3                      
+ 188   3                      
+ 189   3              }
+ 190   2              break;
+ 191   2              case IR_VOL_ADD:
+ 192   2              if(setState==SET_STATE_MENU){
+ 193   3                      
+ 194   3                      curMenuIndex=(curMenuIndex+1)%CONFIG_LEN;
+ 195   3              //      curMenu=curMenuArr[curMenuIndex];
+ 196   3                      showMenuItem(curMenuIndex,1);
+ 197   3                      
+ 198   3              } else  if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 199   3                      
+ 200   3                              digiBuf[curSelBit]=(digiBuf[curSelBit]+1)%10;
+ 201   3                              dispDigit();
+ 202   3              }
+ 203   2              break;
+ 204   2              case IR_VOL_MINUS:
+ 205   2              if(setState==SET_STATE_MENU){
+ 206   3                      
+ 207   3                      curMenuIndex=(curMenuIndex+CONFIG_LEN-1)%CONFIG_LEN;
+ 208   3              //      curMenu=curMenuArr[curMenuIndex];
+ 209   3                      showMenuItem(curMenuIndex,1);
+ 210   3                      
+ 211   3              }else   if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 212   3                      
+ 213   3                              digiBuf[curSelBit]=(digiBuf[curSelBit]+10-1)%10;
+ 214   3                              dispDigit();
+ 215   3              }
+ 216   2              break;
+ 217   2              case IR_ZERO:
+ 218   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 219   3                              digiBuf[curSelBit]=0;
+ 220   3                              dispDigit();
+ 221   3              }
+ 222   2              break;
+ 223   2              case IR_ONE:
+ 224   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 225   3                              digiBuf[curSelBit]=1;
+ 226   3                              dispDigit();
+ 227   3              }
+ 228   2              break;
+ 229   2              case IR_TWO:
+ 230   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 231   3                              digiBuf[curSelBit]=2;
+ 232   3                              dispDigit();
+ 233   3              }
+ 234   2              break;
+ 235   2              case IR_THREE:
+ 236   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 237   3                              digiBuf[curSelBit]=3;
+ 238   3                              dispDigit();
+ 239   3              }
+ 240   2              break;
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 5   
+
+ 241   2              case IR_FOUR:
+ 242   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 243   3                              digiBuf[curSelBit]=4;
+ 244   3                              dispDigit();
+ 245   3              }
+ 246   2              break;
+ 247   2              case IR_FIVE:
+ 248   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 249   3                              digiBuf[curSelBit]=5;
+ 250   3                              dispDigit();
+ 251   3              }
+ 252   2              break;
+ 253   2              case IR_SIX:
+ 254   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 255   3                              digiBuf[curSelBit]=6;
+ 256   3                              dispDigit();
+ 257   3              }
+ 258   2              break;
+ 259   2              case IR_SEVEN:
+ 260   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 261   3                              digiBuf[curSelBit]=7;
+ 262   3                              dispDigit();
+ 263   3              }
+ 264   2              break;
+ 265   2              case IR_EIGHT:
+ 266   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 267   3                              digiBuf[curSelBit]=8;
+ 268   3                              dispDigit();
+ 269   3              }
+ 270   2              break;
+ 271   2              case IR_NINE:
+ 272   2              if(setState==SET_STATE_MENU_ITEM_BIT_SEL){
+ 273   3                              digiBuf[curSelBit]=9;
+ 274   3                              dispDigit();
+ 275   3              }
+ 276   2              break;
+ 277   2      
+ 278   2              default:
+ 279   2              
+ 280   2                      break;
+ 281   2              
+ 282   2              }
+ 283   1              
+ 284   1      }
+ 285          
+ 286          void Ircordpro(void)
+ 287          { 
+ 288   1              uchar i, j, k=1;
+ 289   1              uchar cord,value;
+ 290   1      
+ 291   1              for(i=0;i<4;i++)      //处理4个字节
+ 292   1              {
+ 293   2                      for(j=1;j<=8;j++) //处理1个字节8位
+ 294   2                      {
+ 295   3                              cord=irData[k];
+ 296   3              //              if(cord>7)//大于某值为1，这里为7，与晶振有关，这个值需要具体调试          0.278*7=1.946 0.256*7=    1.792
+ 297   3                              if(cord>2)       // 0.6*3=1.8
+ 298   3                              {
+ 299   4                                      value|=0x80;
+ 300   4                              }
+ 301   3                              if(j<8)
+ 302   3                              {
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 6   
+
+ 303   4                                      value>>=1;
+ 304   4                              }
+ 305   3                              k++;
+ 306   3                      }
+ 307   2                      IRcord[i]=value;
+ 308   2                      value=0;     
+ 309   2              } 
+ 310   1      }
+ 311          
+ 312          
+ 313          void saveConfig(){
+ 314   1              uchar m;
+ 315   1              IapEraseSector(IAP_SETTINGS_ADDRESS); 
+ 316   1              for(m=0;m<CONFIG_LEN;m++){        
+ 317   2                      IapProgramByte(IAP_SETTINGS_ADDRESS+m,configValueArr[m]);
+ 318   2                      configValueArr[m]= IapReadByte(IAP_SETTINGS_ADDRESS+m);
+ 319   2              }
+ 320   1      }
+ 321          void retreiveConfig(){
+ 322   1              uchar m;
+ 323   1              for(m=0;m<CONFIG_LEN;m++){       
+ 324   2              //      if(m==CONFIG_XXX){}
+ 325   2                      configValueArr[m]= IapReadByte(IAP_SETTINGS_ADDRESS+m);
+ 326   2                      if(configValueArr[m]==0xff){
+ 327   3                              configValueArr[m]=configInitValueArr[m];
+ 328   3                      }
+ 329   2              }
+ 330   1      }
+ 331          void processSettingIfNecessary(){
+ 332   1              //600us计时下不需要判断Setting
+ 333   1              //if(inSetting)
+ 334   1              {
+ 335   2                  if(irProcessFlag)                        
+ 336   2                      {   
+ 337   3                         Ircordpro();
+ 338   3                         Ir_work();
+ 339   3                         irProcessFlag=0;
+ 340   3                      }
+ 341   2              }
+ 342   1                 
+ 343   1        
+ 344   1      }
+ 345          void irTime0Process(){
+ 346   1              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+ 347   1              TH0 = 0xFD;             //设置定时初值
+ 348   1      
+ 349   1              if(irReceiveFlag==1)
+ 350   1              {
+ 351   2                      irTime++;  //用于计数2个下降沿之间的时间
+ 352   2              }
+ 353   1      }
+ 354          void irExProcess(){
+ 355   1              if(irProcessFlag==0)                      
+ 356   1              {
+ 357   2                      
+ 358   2                      if(irReceiveFlag==1)
+ 359   2                      {
+ 360   3                      
+ 361   3                 //   if(irTime>=33&&irTime<63){//引导码 TC9012的头码，9ms+4.5ms                0.278*33=9.174  0.278*63=17.514  0.2
+             -56*33= 8.448 0.256*63= 16.128
+ 362   3                     if(irTime>=15&&irTime<28){ //  0.6*15=9 0.6*27=16.2
+ 363   4                                      irCount=0;
+C51 COMPILER V9.01   CONFIG                                                                02/25/2014 14:04:45 PAGE 7   
+
+ 364   4                              }
+ 365   3                      irData[irCount]=irTime;//存储每个电平的持续时间，用于以后判断是0还是1
+ 366   3                      irTime=0;
+ 367   3                      irCount++;
+ 368   3                              if(irCount==33)
+ 369   3                      {
+ 370   4                                      
+ 371   4                                      irReceiveFlag=0;
+ 372   4                                      irProcessFlag=1;
+ 373   4                                      irCount=0;
+ 374   4                      //              ET0=0;    //关中断
+ 375   4                      //      TR0 = 0;                //定时器0停止计时
+ 376   4                              }
+ 377   3                      
+ 378   3                      }
+ 379   2                      else{
+ 380   3                               irReceiveFlag=1;
+ 381   3                               irTime=0;
+ 382   3              //               ET0=1;    //开中断
+ 383   3              //           TR0 = 1;           //定时器0开始计时
+ 384   3                      }
+ 385   2          }
+ 386   1      }
+ 387          void irInit(){  //未打开总中断
+ 388   1        
+ 389   1              AUXR &= 0x7F;           //定时器时钟12T模式
+ 390   1              TMOD &= 0xF0;           //设置定时器模式
+ 391   1              TMOD |= 0x01;           //设置定时器模式
+ 392   1              TL0 = 0xD7;             //设置定时初值   16位 600us 误差1%
+ 393   1              TH0 = 0xFD;             //设置定时初值
+ 394   1              TF0 = 0;                //清除TF0标志
+ 395   1              ET0=1;
+ 396   1              TR0=1;
+ 397   1      
+ 398   1              IT0 = 1;   //指定外部中断0下降沿触发，INT0 (P3.2)
+ 399   1              EX0 = 1;   //使能外部中断
+ 400   1       
+ 401   1      
+ 402   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1471    ----
+   CONSTANT SIZE    =     65    ----
+   XDATA SIZE       =     85       3
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      4       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

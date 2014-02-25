@@ -384,7 +384,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	}
 
 	public boolean isSerialCommOk() {
-		return true;
+		return this.serialCommNotConnected == false;
 //		return this.serialCommBusy == false
 //				&& this.serialCommNotConnected == false
 //				&& this.commState == DATA_TYPE_NOTHING;

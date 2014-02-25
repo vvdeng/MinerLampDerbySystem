@@ -1,0 +1,72 @@
+C51 COMPILER V9.01   MAIN                                                                  01/24/2014 10:46:31 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: d:\Keil4\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <reg52.h>
+   2          #include "useful.h"
+   3          //sfr P2M1=0x95;
+   4          //sfr P2M0=0x96;
+   5          sbit rst=P2^1;
+   6          sbit dat=P2^2;
+   7          sbit busy=P2^3;
+   8          sbit ledTest=P2^0;
+   9          void yuyin(){
+  10   1      //      while(busy==0);
+  11   1              rst=1;
+  12   1              delayUs(1000);
+  13   1      //      delayMs(1);
+  14   1              rst=0;
+  15   1      //      delayMs(1);
+  16   1              delayUs(1000);
+  17   1      //      while(cnt>0){
+  18   1                      dat=1;
+  19   1      //              delayMs(1);
+  20   1                      delayUs(200);
+  21   1                      dat=0;
+  22   1      //              delayMs(1);
+  23   1                      delayUs(200);
+  24   1      
+  25   1                      dat=1;
+  26   1      //              delayMs(1);
+  27   1                      delayUs(200);
+  28   1                      dat=0;
+  29   1      //              delayMs(1);
+  30   1                      delayUs(200);
+  31   1      //              cnt--;
+  32   1      //      }
+  33   1      
+  34   1      }
+  35          void main(){
+  36   1      //      ledTest=0;
+  37   1      //      P2M1=0x08;//0b00001000;
+  38   1      //      P2M0=0x07;//0b00000111;
+  39   1                delayMs(3000);
+  40   1                 ledTest=0;
+  41   1                 //yuyin();
+  42   1              while(1){
+  43   2                      delayMs(3000);
+  44   2              //       ledTest=~ledTest;
+  45   2                      yuyin();
+  46   2              }
+  47   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     75    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+C51 COMPILER V9.01   MAIN                                                                  01/24/2014 10:46:31 PAGE 2   
+
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
