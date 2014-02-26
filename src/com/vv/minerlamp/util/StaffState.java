@@ -11,7 +11,7 @@ public class StaffState {
 	public static final int LAMP_FULL = 5;
 	public static final int LAMP_ERROR = 6;
 	public static final int LAMP_OFFLINE = 7;
-	public static int[] unitsStateArr = new int[SerialComm.DATA_TYPE_UNITS_INFO_LENTTH];
+	public static int[] unitsStateArr = new int[SerialComm.DATA_UNITS_INFO_LENTTH];
 	public static final int UNIT_STATE_NULL = 0;
 	public static final int UNIT_STATE_EMPTY = 1;
 	public static final int UNIT_STATE_CHARGING = 2;

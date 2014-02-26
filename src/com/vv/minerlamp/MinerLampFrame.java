@@ -69,6 +69,8 @@ import org.jdesktop.swingx.StackLayout;
 import org.pushingpixels.substance.api.SubstanceLookAndFeel;
 import org.pushingpixels.substance.api.skin.CremeSkin;
 
+import sun.misc.Cleaner;
+
 import com.vv.minerlamp.comm.CommCmdObject;
 import com.vv.minerlamp.comm.SerialComm;
 import com.vv.minerlamp.dao.ChargingLogDAO;
@@ -83,6 +85,7 @@ import com.vv.minerlamp.entity.LampUnit;
 import com.vv.minerlamp.entity.RackStatistics;
 import com.vv.minerlamp.entity.Staff;
 import com.vv.minerlamp.entity.User;
+import com.vv.minerlamp.util.CommDataState;
 import com.vv.minerlamp.util.CommUtil;
 import com.vv.minerlamp.util.GlobalData;
 import com.vv.minerlamp.util.StaffAction;
@@ -371,7 +374,7 @@ public class MinerLampFrame extends JFrame {
 		menuBar.add(helpMenu);
 
 		setJMenuBar(menuBar);
-		addRackBtn = new JButton("增加充电架数");//提前至次数，为调用toolbarAndMenuEnabled(false);
+		addRackBtn = new JButton("增加充电架数");// 提前至次数，为调用toolbarAndMenuEnabled(false);
 		toolbarAndMenuEnabled(false);
 		if (SerialComm.sysSerialComm.isSerialCommOk()) {
 			commStateLabel = new BlueJLabel("串口通信正常");
@@ -432,7 +435,7 @@ public class MinerLampFrame extends JFrame {
 		rackPanel.add(rackScrollPane, BorderLayout.CENTER);
 		JPanel rackBtnPanel = new JPanel();
 		rackBtnPanel.setPreferredSize(new Dimension(100, 30));
-		
+
 		addRackBtn.addActionListener(new ActionListener() {
 
 			@Override
@@ -581,7 +584,7 @@ public class MinerLampFrame extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (SerialComm.sysSerialComm.commState != SerialComm.DATA_TYPE_NOTHING) {
+				if (SerialComm.sysSerialComm.commDataState != CommDataState.NOTHING) {
 
 				}
 				if (!GlobalData.cmdQueue.isEmpty()) {
@@ -591,7 +594,15 @@ public class MinerLampFrame extends JFrame {
 					}
 
 				} else {
-					SerialComm.sysSerialComm.reqNextRackUnitInfo();
+					if (GlobalData.refreshSelRack == false) {
+						GlobalData.refreshSelRack = true;
+						setCommBusy(true);
+						SerialComm.sysSerialComm.reqNextRackUnitInfo();
+					} else {
+						GlobalData.refreshSelRack = false;
+						SerialComm.sysSerialComm.reqSelRackUnitInfo();
+
+					}
 				}
 
 			}
@@ -726,19 +737,19 @@ public class MinerLampFrame extends JFrame {
 	public JTree makeRackTree() {
 
 		final List<LampRack> lampRackList = lampRackDAO.getAll();
-		
-//		List nodeList = new ArrayList();
-//		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode();
-//		for (LampRack lampRack : lampRackList) {
-//			DefaultMutableTreeNode node = new DefaultMutableTreeNode(lampRack);
-//			nodeList.add(node);
-//			rootNode.add(node);
-//		}
-//
-//		rackTreeModel = new DefaultTreeModel(rootNode);
-//
-//		rackTree = new JTree(rackTreeModel);
-		 rackTree = new JTree(lampRackList.toArray());
+
+		// List nodeList = new ArrayList();
+		// DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode();
+		// for (LampRack lampRack : lampRackList) {
+		// DefaultMutableTreeNode node = new DefaultMutableTreeNode(lampRack);
+		// nodeList.add(node);
+		// rootNode.add(node);
+		// }
+		//
+		// rackTreeModel = new DefaultTreeModel(rootNode);
+		//
+		// rackTree = new JTree(rackTreeModel);
+		rackTree = new JTree(lampRackList.toArray());
 		rackTree.setRowHeight(20);
 		rackTree.setCellRenderer(new DefaultTreeCellRenderer() {
 			public Component getTreeCellRendererComponent(JTree tree,
@@ -805,9 +816,11 @@ public class MinerLampFrame extends JFrame {
 	public void refreshLampUnitsWithSelectRack(boolean flag) {
 
 		LampRack selectedLampPack = getSelectedLampPack();
+		System.out.println("selectedLampRack="+selectedLampPack);
 		if (selectedLampPack == null) {
 			return;
 		}
+		GlobalData.selRackId=selectedLampPack.getId().intValue();
 		if (flag) {
 			mainPanel.setSelectedIndex(0);
 		}
@@ -1160,8 +1173,9 @@ public class MinerLampFrame extends JFrame {
 			rackStatePanel.add(faultUnintLabel, new GBC(3, 1).setWeight(0, 0)
 					.setInsets(0, 0, 0, 20));
 			rackStatePanel.add(fullUnitLabel, new GBC(5, 1).setWeight(0, 0));
-			rackStatePanel.add(refreshRackButton, new GBC(7, 1).setWeight(0, 0)
-					.setInsets(0, 20, 0, 0));
+			// rackStatePanel.add(refreshRackButton, new GBC(7, 1).setWeight(0,
+			// 0)
+			// .setInsets(0, 20, 0, 0));
 			// rackStatePanel.add(refreshAllRackButton,
 			// new GBC(6, 1).setWeight(0, 0).setInsets(0, 20, 0, 0));
 
@@ -2051,7 +2065,7 @@ public class MinerLampFrame extends JFrame {
 			while (true) {
 				synchronized (this) {
 					wait();
-					if (SerialComm.sysSerialComm.isNewDataCome()) {
+					if (SerialComm.sysSerialComm.isRackNeededRefresh()) {
 
 						// TODO
 						List<LampUnit> unitList = lampUnitDAO
@@ -2100,13 +2114,11 @@ public class MinerLampFrame extends JFrame {
 										action, newState);
 							}
 						}
-						SerialComm.sysSerialComm.setUnitsRefreshed(false);
-						System.out
-								.println("-----------------------------------------------------------------------------------------");
+						SerialComm.sysSerialComm.setRackRefreshed(false);
 						publish(0);
-						SerialComm.sysSerialComm.commState = SerialComm.DATA_TYPE_NOTHING;// 暂且放在此处
+						
 					} else {
-						if (SerialComm.sysSerialComm.commState == SerialComm.DATA_TYPE_NOTHING) {
+						if (SerialComm.sysSerialComm.commState == SerialComm.COMM_STATE_NOTHING) {
 							publish(1);
 						}
 					}
@@ -2119,16 +2131,28 @@ public class MinerLampFrame extends JFrame {
 			for (Integer value : list) {
 				switch (value.intValue()) {
 				case 0:
-					refreshLampUnitsWithSelectRack(false);
-					refreshRackStatisticsLabelContent();
-					if (SerialComm.commState == SerialComm.DATA_TYPE_UNITS_INFO) {
-						SerialComm.sysSerialComm.reqNextRackUnitInfo();
-					} else if (SerialComm.commState == SerialComm.DATA_TYPE_SINGLE_UNIT_INFO) {
-						{
-							SerialComm.commState = SerialComm.DATA_TYPE_NOTHING;
-							setCommBusy(false);
-						}
+					if (SerialComm.commState == SerialComm.COMM_STATE_UNITS_INFO) {
+						refreshRackStatisticsLabelContent();
+						SerialComm.commState = SerialComm.COMM_STATE_NOTHING;
+						setCommBusy(false);
+					} else if (SerialComm.commState == SerialComm.COMM_STATE_SEL_UNITS_INFO) {
+						System.out.println("refresh sel rackPanel");
+						refreshLampUnitsWithSelectRack(true);
+						refreshRackStatisticsLabelContent();
+						SerialComm.commState = SerialComm.COMM_STATE_NOTHING;
+						setCommBusy(false);
+
 					}
+
+					/*
+					 * if (SerialComm.commState ==
+					 * SerialComm.DATA_TYPE_UNITS_INFO) {
+					 * SerialComm.sysSerialComm.reqNextRackUnitInfo(); } else if
+					 * (SerialComm.commState ==
+					 * SerialComm.DATA_TYPE_SINGLE_UNIT_INFO) { {
+					 * SerialComm.commState = SerialComm.DATA_TYPE_NOTHING;
+					 * setCommBusy(false); } }
+					 */
 					break;
 				case 1:
 					setCommBusy(false);
