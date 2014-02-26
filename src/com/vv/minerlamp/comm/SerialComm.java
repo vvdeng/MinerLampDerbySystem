@@ -297,7 +297,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 
 	}
 
-	public boolean reqNextRackUnitInfo() {
+	public boolean reqNextRackUnitInfoOld() {
 		boolean finished = false;
 		if (currentAddr < SysConfiguration.rackCount) {
 
@@ -318,7 +318,15 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 		}
 		return finished;
 	}
+	public void reqNextRackUnitInfo() {
 
+			currentAddr=(currentAddr++%SysConfiguration.rackCount)+1;
+			commState = COMM_STATE_UNITS_INFO;
+			commDataState = CommDataState.WAIT_DATA;
+			write(new byte[] { (byte) makeCmdAndAddr(CMD_REQ_UNIT_INFO,
+					currentAddr) });
+		
+	}
 	public void reqSelRackUnitInfo() {
 
 		commState = COMM_STATE_SEL_UNITS_INFO;
