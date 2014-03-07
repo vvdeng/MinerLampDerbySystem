@@ -36,7 +36,7 @@ public class StaffDAO {
 			}
 			staffId = (Long) session.save(staff);
 			lampUnitDAO.setLampStateInCurrentSession(staff.getRackId(),
-					staff.getLampNo(), state, action, manufacturer, session);
+					staff.getLampNo(),staff, state, action, manufacturer, session);
 			transaction.commit();
 		} catch (HibernateException e) {
 			transaction.rollback();
@@ -74,7 +74,7 @@ public class StaffDAO {
 		Transaction transaction = null;
 		try {
 			transaction = session.beginTransaction();
-			staff.setChargingLastTime(date);
+			staff.setChargingLastTime(date.getTime());
 			session.update(staff);
 			transaction.commit();
 		} catch (HibernateException e) {
@@ -113,7 +113,7 @@ public class StaffDAO {
 			query.setLong("rackId", rackId);
 			query.setLong("lampNo", lampNo);
 			query.executeUpdate();
-			lampUnitDAO.setLampStateInCurrentSession(rackId, lampNo, state,
+			lampUnitDAO.setLampStateInCurrentSession(rackId, lampNo,null, state,
 					action, null, session);
 			transaction.commit();
 		} catch (HibernateException hibernateException) {

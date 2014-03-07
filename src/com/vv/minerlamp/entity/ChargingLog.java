@@ -1,8 +1,5 @@
 package com.vv.minerlamp.entity;
 
-import java.sql.Blob;
-import java.util.Date;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -23,13 +20,13 @@ public class ChargingLog {
 	private Long clazzId;
 	private String clazz;
 
-	private Date UndergroundBeginTime;
-	private Date UndergroundEndTime;
+	private Long UndergroundBeginTime;
+	private Long UndergroundEndTime;
 	private Integer oldState;
 	private Integer newState;
 	private Integer action;
 	private String description;
-	private Date lastUpdateTime;
+	private Long lastUpdateTime;
 	private String clazzDay;
 
 	public ChargingLog() {
@@ -120,20 +117,20 @@ public class ChargingLog {
 	}
 
 	@Column(name = "underground_begintime")
-	public Date getUndergroundBeginTime() {
+	public Long getUndergroundBeginTime() {
 		return UndergroundBeginTime;
 	}
 
-	public void setUndergroundBeginTime(Date undergroundBeginTime) {
+	public void setUndergroundBeginTime(Long undergroundBeginTime) {
 		UndergroundBeginTime = undergroundBeginTime;
 	}
 
 	@Column(name = "underground_endtime")
-	public Date getUndergroundEndTime() {
+	public Long getUndergroundEndTime() {
 		return UndergroundEndTime;
 	}
 
-	public void setUndergroundEndTime(Date undergroundEndTime) {
+	public void setUndergroundEndTime(Long undergroundEndTime) {
 		UndergroundEndTime = undergroundEndTime;
 	}
 
@@ -174,11 +171,11 @@ public class ChargingLog {
 	}
 
 	@Column(name = "last_update_time")
-	public Date getLastUpdateTime() {
+	public Long getLastUpdateTime() {
 		return lastUpdateTime;
 	}
 
-	public void setLastUpdateTime(Date lastUpdateTime) {
+	public void setLastUpdateTime(Long lastUpdateTime) {
 		this.lastUpdateTime = lastUpdateTime;
 	}
 

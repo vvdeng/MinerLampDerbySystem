@@ -6,6 +6,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -73,16 +75,16 @@ class LampStatisticsDialog extends JDialog {
 				if (tabbedPane.getSelectedIndex() == 0) {
 					statisticsTable.setModel(TableUtil.getModel(
 							lampUnitDAO.listAllForModel(false),
-							statisticsColumnNames));
+							statisticsColumnNames,statisticsDateColumnSet));
 				} else if (tabbedPane.getSelectedIndex() == 1)  {
 					recordTable.setModel(TableUtil.getModel(
 							lampChangeLogDAO.listAllforModel(),
-							recordColumnNames));
+							recordColumnNames,recordDateColumnSet));
 				}
 				else if (tabbedPane.getSelectedIndex() == 2)  {
 					overLimitsTable.setModel(TableUtil.getModel(
 							lampUnitDAO.listAllForModel(true),
-							statisticsColumnNames));
+							statisticsColumnNames,statisticsDateColumnSet));
 				}
 			}
 		}));
@@ -114,13 +116,17 @@ class LampStatisticsDialog extends JDialog {
 		bottomPanel.add(exit);
 		add(bottomPanel, BorderLayout.SOUTH);
 		setResizable(false);
-		setSize(560, 320);
+		setSize(WIDTH, HEIGHT);
 		setLocation(Util.calculatePosition(owner, this));
 	}
 
 	private String[] statisticsColumnNames = { "灯架号", "矿灯号", "累计充电次数",
-			"开始使用时间", "厂家" };
+			"开始使用时间","上次充电时间","累计充电时长(分钟)", "厂家" };
+	private HashSet<Integer> statisticsDateColumnSet=new HashSet<Integer>(Arrays.asList(3,4));
 	private String[] recordColumnNames = { "灯架号", "矿灯号", "员工姓名", "员工工号", "更换时间" };
+	private HashSet<Integer> recordDateColumnSet=new HashSet<Integer>(Arrays.asList(4));
 	private LampUnitDAO lampUnitDAO;
 	private LampChangeLogDAO lampChangeLogDAO;
+	private static final int WIDTH=800;
+	private static final int HEIGHT=600;
 }

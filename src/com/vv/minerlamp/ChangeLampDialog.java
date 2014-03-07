@@ -56,7 +56,7 @@ class ChangeLampDialog extends JDialog {
 				Integer initCount = new Integer(initCountTxt.getText());
 				Date initTime = new Date();
 				initTime = initTimeTxt.getDate();
-				lampUnitDAO.changeLamp(rackId, lampNo, initCount, initTime);
+				lampUnitDAO.changeLamp(rackId, lampNo, initCount, initTime.getTime());
 				JOptionPane.showMessageDialog(ChangeLampDialog.this,
 						"矿灯使用度设置成功", "提示", JOptionPane.INFORMATION_MESSAGE);
 				owner.refreshChargingLabel();

@@ -7,6 +7,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -62,7 +64,7 @@ class AlarmDialog extends JDialog {
 						.getSelectedItem();
 				alarmTable.setModel(TableUtil.getModel(staffDAO
 						.queryTimeoutModelByDepartmentId(selInfoItem.getId()),
-						alarmColumnNames));
+						alarmColumnNames,dateColumnSet));
 
 			}
 		}));
@@ -122,6 +124,7 @@ class AlarmDialog extends JDialog {
 	}
 
 	private String[] alarmColumnNames = { "工号", "姓名", "队组", "下井时间" };
+	private HashSet<Integer> dateColumnSet=new HashSet<Integer>(Arrays.asList(3));
 	private JComboBox departmentCombo;
 	private JTable alarmTable;
 	private InfoItemDAO infoItemDAO;

@@ -1,7 +1,6 @@
 package com.vv.minerlamp.entity;
 
 import java.sql.Blob;
-import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -30,7 +29,7 @@ public class Staff {
 	private Long clazzId;
 	private String clazz;
 	private Blob image;
-	private Date chargingLastTime; //命名有误，实际是准备下井时间，而不是开始充电时间
+	private Long chargingLastTime; //命名有误，实际是准备下井时间，而不是开始充电时间
 //	public static final int BATTERY_NOTUSE = 0;
 //	public static final int BATTERY_UNDERGROUND = 1;
 //	public static final int BATTERY_CHARGING = 2;
@@ -239,11 +238,11 @@ public class Staff {
 	}
 
 	@Column(name = "charging_lasttime")
-	public Date getChargingLastTime() {
+	public Long getChargingLastTime() {
 		return chargingLastTime;
 	}
 
-	public void setChargingLastTime(Date chargingLastTime) {
+	public void setChargingLastTime(Long chargingLastTime) {
 		this.chargingLastTime = chargingLastTime;
 	}
 

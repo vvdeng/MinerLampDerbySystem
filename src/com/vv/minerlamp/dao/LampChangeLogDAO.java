@@ -1,18 +1,13 @@
 package com.vv.minerlamp.dao;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
-import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
-import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.hibernate.criterion.Example;
 
 import com.vv.minerlamp.entity.LampChangeLog;
-import com.vv.minerlamp.entity.Staff;
 import com.vv.minerlamp.util.HibernateUtil;
 
 public class LampChangeLogDAO {

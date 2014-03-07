@@ -11,6 +11,7 @@ import com.vv.minerlamp.entity.LampUnit;
 import com.vv.minerlamp.entity.LedSetting;
 import com.vv.minerlamp.entity.RackStatistics;
 import com.vv.minerlamp.entity.Staff;
+import com.vv.minerlamp.entity.SysInf;
 import com.vv.minerlamp.entity.User;
 
 public class HibernateUtil {
@@ -31,6 +32,7 @@ public class HibernateUtil {
 					.addAnnotatedClass(LampChangeLog.class)
 					.addAnnotatedClass(ChargingLog.class)
 					.addAnnotatedClass(RackStatistics.class)
+					.addAnnotatedClass(SysInf.class)
 					.buildSessionFactory();
 			;
 		} catch (Throwable ex) {

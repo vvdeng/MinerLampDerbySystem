@@ -1,8 +1,7 @@
 package com.vv.minerlamp.dao;
 
-import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Date;
+import java.util.Arrays;
 import java.util.List;
 
 import org.hibernate.HibernateException;
@@ -11,11 +10,9 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 
 import com.vv.minerlamp.entity.ChargingLog;
-import com.vv.minerlamp.entity.RackStatistics;
 import com.vv.minerlamp.entity.Staff;
 import com.vv.minerlamp.util.HibernateUtil;
 import com.vv.minerlamp.util.StaffAction;
-import com.vv.minerlamp.util.StaffState;
 import com.vv.minerlamp.util.SysConfiguration;
 import com.vv.minerlamp.util.Util;
 
@@ -33,6 +30,7 @@ public class ChargingLogDAO {
 		Transaction transaction = null;
 		Long chargingLogId = null;
 		try {
+			chargingLog.setLastUpdateTime(new Date().getTime());
 			chargingLog.setWorkId(staff.getWorkId());
 			chargingLog.setName(staff.getName());
 			chargingLog.setRackId(staff.getRackId());
@@ -47,25 +45,27 @@ public class ChargingLogDAO {
 			chargingLog.setUndergroundBeginTime(staff.getChargingLastTime());
 			// 0点班次下井时间可能跨越两天
 			//充电座首次定义时 chargingLastTime字段为空，为了方便统计，将工作日设置为当前日期
+			
 			if(staff.getChargingLastTime()==null){
 				chargingLog.setClazzDay(Util.formatDate(new Date()));
 			}
-			else if (staff.getChargingLastTime().getHours() > 22
+			else 
+				if (new Date(staff.getChargingLastTime()).getHours() > 22
 					&& staff.getClazz().equals(SysConfiguration.clazz0)) {
 				chargingLog.setClazzDay(Util.formatDate(new Date(staff
-						.getChargingLastTime().getTime()
+						.getChargingLastTime()
 						+ ONE_DAY_MILLONSECONDS)));
 			} else {
-				chargingLog.setClazzDay(Util.formatDate(staff
-						.getChargingLastTime()));
+				chargingLog.setClazzDay(Util.formatDate(new Date(staff
+						.getChargingLastTime())));
 			}
 			if (action.equals(StaffAction.PUT_ON)) {
-				chargingLog.setUndergroundEndTime(new Date());
-				chargingLog.setDescription("归位充电");
+				chargingLog.setUndergroundEndTime(new Date().getTime());
+				chargingLog.setDescription("矿灯充电");
 			} else if (action.equals(StaffAction.TAKE_AWAY)) {
 				chargingLog.setDescription("下井工作");
 			} else if (action.equals(StaffAction.CHARGING_OK)) {
-				chargingLog.setDescription("电池充满");
+				chargingLog.setDescription("矿灯充满");
 			} else if (action.equals(StaffAction.OVER_TIME)) {
 				chargingLog.setDescription("上井超时");
 			} else if (action.equals(StaffAction.ERROR_HAPPENS)) {
@@ -105,16 +105,16 @@ public class ChargingLogDAO {
 				"select chargingLog.workId,chargingLog.name,chargingLog.rackId,chargingLog.lampNo,chargingLog.profession,chargingLog.department,chargingLog.lastUpdateTime,chargingLog.description from ChargingLog chargingLog");
 		StringBuilder querySb = new StringBuilder();
 		if (beginTime != null) {
-			querySb.append("chargingLog.lastUpdateTime>='"
-					+ Util.formatDate(beginTime) + "'");
+			querySb.append("chargingLog.lastUpdateTime>="
+					+ beginTime.getTime() );
 		}
 		if (endTime != null) {
 			if (querySb.length() > 0) {
 				querySb.append(" and ");
 			}
-			querySb.append("chargingLog.lastUpdateTime<='"
-					+ Util.formatDate(new Date(endTime.getTime()
-							+ ONE_DAY_MILLONSECONDS)) + "'");
+			querySb.append("chargingLog.lastUpdateTime<="
+					+ (endTime.getTime()
+							+ ONE_DAY_MILLONSECONDS) );
 		}
 		if (querySb.length() > 0) {
 			sb.append(" where ").append(querySb);

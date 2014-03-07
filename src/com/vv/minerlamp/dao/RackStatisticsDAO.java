@@ -1,14 +1,5 @@
 package com.vv.minerlamp.dao;
 
-import org.hibernate.HibernateException;
-import org.hibernate.Query;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
-
-import com.vv.minerlamp.entity.RackStatistics;
-import com.vv.minerlamp.util.HibernateUtil;
-import com.vv.minerlamp.util.StaffAction;
-import com.vv.minerlamp.util.SysConfiguration;
 
 public class RackStatisticsDAO {
 	public RackStatisticsDAO() {

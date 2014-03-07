@@ -263,7 +263,7 @@ class StaffInfoDialog extends JDialog {
 								"该充电座尚未使用");
 						return;
 					}
-					lampUnitDAO.changeLamp(rackId, lampNo, 0, new Date());
+					lampUnitDAO.changeLamp(rackId, lampNo, 0, new Date().getTime());
 					LampChangeLog lampChangeLog = new LampChangeLog();
 					lampChangeLog.setRackId(rackId);
 					lampChangeLog.setLampNo(lampNo);
@@ -501,7 +501,7 @@ class StaffInfoDialog extends JDialog {
 			chargingCountLabel
 					.setText("累计充电次数：" + lampUnit.getChargingCounts());
 			chargingBeginTimeLabel.setText("开始使用时间："
-					+ Util.formatDate(lampUnit.getChargingBeginTime()));
+					+ Util.formatDate(new Date(lampUnit.getChargingBeginTime())));
 
 		}
 	}

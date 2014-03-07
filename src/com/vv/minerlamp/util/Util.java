@@ -33,9 +33,9 @@ import com.vv.minerlamp.entity.User;
 public class Util {
 	public static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 	public static DateFormat dateTimeFormat = new SimpleDateFormat(
-			"yyyy-MM-dd hh:mm:ss");
+			"yyyy-MM-dd HH:mm:ss");
 	public static DateFormat dateTimeFormat4CreateFile = new SimpleDateFormat(
-			"yyyyMMddhhmmss");
+			"yyyyMMddHHmmss");
 
 	public static String formatDate(Date date) {
 		if (date == null) {
