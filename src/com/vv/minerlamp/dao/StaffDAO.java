@@ -186,9 +186,8 @@ public class StaffDAO {
 		List<Object[]> result;
 
 		Query query = session
-				.createQuery("select staff.clazz,staff.name,staff.rackId,staff.lampNo,staff.department,staff.chargingLastTime from Staff staff where  staff.chargingLastTime is not null and (UNIX_TIMESTAMP(now())-UNIX_TIMESTAMP(staff.chargingLastTime)>="
-						+ (SysConfiguration.timeOutTime + SysConfiguration.standardWorkTime)*3600
-						+ ")");
+				.createQuery("select staff.clazz,staff.name,staff.rackId,staff.lampNo,staff.department,staff.chargingLastTime from Staff staff where  staff.chargingLastTime is not null and ("+new Date().getTime()+"-staff.chargingLastTime)>="+
+						+ (SysConfiguration.timeOutTime + SysConfiguration.standardWorkTime)*3600*1000);
 		result = query.list();
 		session.close();
 		return result;

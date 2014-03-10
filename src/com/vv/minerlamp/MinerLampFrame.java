@@ -97,10 +97,10 @@ import com.vv.minerlamp.util.Util;
 
 public class MinerLampFrame extends JFrame {
 	public MinerLampFrame() {
-		
+
 		init();
 		checkRegist();
-		setTitle("矿灯充电架智能管理系统----"+titleExtra);
+		setTitle("矿灯充电架智能管理系统----" + titleExtra);
 		setIconImage(SysConfiguration.sysIcon);
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		Rectangle bounds = new Rectangle(screenSize);
@@ -614,7 +614,7 @@ public class MinerLampFrame extends JFrame {
 		backgroundActivity = new BackgroundActivity();
 		backgroundActivity.execute();
 		commTimer.start();
-		// postFrameShow();
+//	 postFrameShow();
 	}
 
 	private void init() {
@@ -628,46 +628,113 @@ public class MinerLampFrame extends JFrame {
 		SerialComm.sysSerialComm = new SerialComm(this);
 
 	}
-	private void checkRegist(){
-		sysInfDAO=new SysInfDAO();
-		List<SysInf> sysInfList=sysInfDAO.listAll();
-		if(sysInfList==null||sysInfList.size()<3)	{ //migic number
-			JOptionPane.showMessageDialog(MinerLampFrame.this, "系统配置错误，请联系软件提供商");
+
+	private void checkRegist() {
+		sysInfDAO = new SysInfDAO();
+		List<SysInf> sysInfList = sysInfDAO.listAll();
+		if (sysInfList == null || sysInfList.size() < SysInf.INIT_DATA_COUNT) { 
+			JOptionPane.showMessageDialog(MinerLampFrame.this,
+					"系统配置错误，请联系软件提供商");
 			System.exit(0);
 		}
 		for (SysInf sysInf : sysInfList) {
 			GlobalData.sysInfoMap.put(sysInf.getCat(), sysInf);
 		}
-		SysInf regist=GlobalData.sysInfoMap.get(SysInf.CAT_USER_REGIST);
-		if(regist.getVal().equals(SysInf.VAL_REGISTED)){ //已经注册
-			titleExtra="注册版";
-			return; 
-		}
-		else if(regist.getVal().equals(SysInf.VAL_TRY_COUNT)){
-			Integer totalCount=GlobalData.sysInfoMap.get(SysInf.CAT_LIMIT_COUNT).getVal();
-			SysInf usedCountInf=GlobalData.sysInfoMap.get(SysInf.CAT_USED_COUNT);
-			if(usedCountInf==null){
-				titleExtra="剩余使用次数"+totalCount+"次";
-				SysInf inf=new SysInf();
+		SysInf regist = GlobalData.sysInfoMap.get(SysInf.CAT_USER_REGIST);
+		if (regist.getVal().equals(SysInf.VAL_REGISTED)) { // 已经注册
+			titleExtra = "注册版";
+			return;
+		} else if (regist.getVal().equals(SysInf.VAL_TRY_COUNT)) {
+			Integer totalCount = GlobalData.sysInfoMap.get(
+					SysInf.CAT_LIMIT_COUNT).getVal();
+			SysInf usedCountInf = GlobalData.sysInfoMap
+					.get(SysInf.CAT_USED_COUNT);
+			if (usedCountInf == null) {
+				titleExtra = "剩余使用次数" + totalCount + "次";
+				//用户登录后再减少试用次数
+				/*
+				SysInf inf = new SysInf();
 				inf.setCat(SysInf.CAT_USED_COUNT);
 				inf.setVal(1);
 				sysInfDAO.save(inf);
-			}
-			else{
-				titleExtra="剩余使用次数"+(totalCount-usedCountInf.getVal())+"次";
-				SysInf inf=new SysInf();
-				inf.setCat(SysInf.CAT_USED_COUNT );
-				inf.setVal(usedCountInf.getVal()+1);
+				*/
+			} else {
+				titleExtra = "剩余使用次数" + (totalCount - usedCountInf.getVal())
+						+ "次";
+				if (totalCount - usedCountInf.getVal() <= 0) {
+					reachLimited = true; // 达到使用次数限制
+				}
+				//用户登录后再减少试用次数
+		/*		SysInf inf = new SysInf();
+				inf.setCat(SysInf.CAT_USED_COUNT);
+				inf.setVal(usedCountInf.getVal() + 1);
 				sysInfDAO.update(inf);
+			*/
 			}
-			
+
+		} else if (regist.getVal().equals(SysInf.VAL_TRY_DAY)) {
+			Integer totalDay = GlobalData.sysInfoMap.get(SysInf.CAT_LIMIT_DAY)
+					.getVal();
 		}
-		else if(regist.getVal().equals(SysInf.VAL_TRY_DAY)){
-			Integer totalDay=GlobalData.sysInfoMap.get(SysInf.CAT_LIMIT_DAY).getVal();
-		}
-		
-		
+
 	}
+	public void postFrameShow() {
+	/*
+		 int delay = 5 * 1000; // milliseconds
+		ActionListener taskPerformer = new ActionListener() {
+			public void actionPerformed(ActionEvent evt) {
+				
+				if (GlobalData.machineCode!=null&&GlobalData.machineCode.length()==GlobalData.MACHINE_CODE_LEN) {
+					
+					SysInf machineCodeInf=GlobalData.sysInfoMap.get(SysInf.CAT_MACHINE_CODE);
+					//以下情况为新创建的数据库或者从其他机器上还原过来的数据库
+					if(machineCodeInf==null){
+						System.out.println("insert machineCode="+GlobalData.machineCode);
+						SysInf inf=new SysInf();
+						inf.setCat(SysInf.CAT_MACHINE_CODE);
+						inf.setDescr(GlobalData.machineCode);
+						sysInfDAO.save(inf);
+						GlobalData.sysInfoMap.put(SysInf.CAT_MACHINE_CODE,inf);
+						if(GlobalData.sysInfoMap.get(SysInf.CAT_USER_REGIST).equals(SysInf.VAL_REGISTED)){
+							inf=new SysInf();
+							inf.setCat(SysInf.CAT_USER_REGIST);
+							inf.setVal(SysInf.VAL_TRY_COUNT);
+							sysInfDAO.update(inf);
+							return;
+						}
+						checkRegistTimer.stop();
+					}
+					else if(!GlobalData.machineCode.equals(machineCodeInf.getDescr())){
+						System.out.println("update machineCode="+GlobalData.machineCode);
+						SysInf inf=new SysInf();
+						inf.setCat(SysInf.CAT_MACHINE_CODE);
+						inf.setDescr(GlobalData.machineCode);
+						sysInfDAO.update(inf);
+						GlobalData.sysInfoMap.put(SysInf.CAT_MACHINE_CODE,inf);
+						inf=new SysInf();
+						inf.setCat(SysInf.CAT_MACHINE__OLD_CODE);
+						inf.setDescr(GlobalData.machineCode);
+						sysInfDAO.save(inf);
+						
+						if(GlobalData.sysInfoMap.get(SysInf.CAT_USER_REGIST).equals(SysInf.VAL_REGISTED)){
+							inf=new SysInf();
+							inf.setCat(SysInf.CAT_USER_REGIST);
+							inf.setVal(SysInf.VAL_TRY_COUNT);
+							sysInfDAO.update(inf);
+							return;
+						}
+						checkRegistTimer.stop();
+					}
+					
+				}
+			}
+		};
+		
+		checkRegistTimer=new Timer(delay, taskPerformer);
+		checkRegistTimer.start();
+	*/
+	}
+	/*
 	private void postFrameShow() {
 		if (SerialComm.sysSerialComm.isSerialCommOk()) {
 			setCommBusy(true);
@@ -684,6 +751,7 @@ public class MinerLampFrame extends JFrame {
 		};
 		new Timer(SysConfiguration.delay, taskPerformer).start();
 	}
+	*/
 
 	private void loadConfig() {
 		SysConfiguration.init();
@@ -698,26 +766,31 @@ public class MinerLampFrame extends JFrame {
 		button.setContentAreaFilled(false);
 		return button;
 	}
-	public JPanel createUnitPanel(final UnitAction action){
-		JPanel unitPanel=new JPanel();
+
+	public JPanel createUnitPanel(final UnitAction action) {
+		JPanel unitPanel = new JPanel();
 		unitPanel.setBorder(BorderFactory.createEtchedBorder());
-		BorderLayout bLayout=new BorderLayout();
+		BorderLayout bLayout = new BorderLayout();
 		unitPanel.setLayout(bLayout);
-		unitPanel.add(createUnitButton(action),BorderLayout.CENTER);
-		JLabel infoLabel=new JLabel();
-//		infoLabel.setBackground(new Color(82, 230, 247));
-//		infoLabel.setBackground(new Color(182, 230, 247));
-		infoLabel.setBackground(new Color(239,240,234));
+		unitPanel.add(createUnitButton(action), BorderLayout.CENTER);
+		JLabel infoLabel = new JLabel();
+		// infoLabel.setBackground(new Color(82, 230, 247));
+		// infoLabel.setBackground(new Color(182, 230, 247));
+		infoLabel.setBackground(new Color(239, 240, 234));
 		infoLabel.setFont(new Font("TimesRoman", Font.BOLD, 12));
 		infoLabel.setOpaque(true);
 
-		
 		infoLabel.setHorizontalAlignment(JLabel.CENTER);
-		infoLabel.setText("<html><center><strong>"+action.getValue(UnitAction.STAFF_NAME)+"</strong></center><ceneter><strong>"+action.getValue(UnitAction.STAFF_DEPART)+"</strong></center></html>");
-		unitPanel.add(infoLabel,BorderLayout.SOUTH);
-		
+		infoLabel.setText("<html><center><strong>"
+				+ action.getValue(UnitAction.STAFF_NAME)
+				+ "</strong></center><ceneter><strong>"
+				+ action.getValue(UnitAction.STAFF_DEPART)
+				+ "</strong></center></html>");
+		unitPanel.add(infoLabel, BorderLayout.SOUTH);
+
 		return unitPanel;
 	}
+
 	public JButton createUnitButton(final UnitAction action) {
 		JButton button = new JButton(action);
 		button.setVerticalTextPosition(JButton.TOP);
@@ -727,14 +800,12 @@ public class MinerLampFrame extends JFrame {
 		button.setMargin(new Insets(0, 0, 30, 0));
 		// button.setContentAreaFilled(true);
 		// button.setContentAreaFilled(true);
-	//	button.setBorder(BorderFactory.createEtchedBorder());
+		// button.setBorder(BorderFactory.createEtchedBorder());
 		// button.setComponentPopupMenu(new UnitPopupMenu((Long) action
 		// .getValue(UnitAction.RACK_ID), (Long) action
 		// .getValue(UnitAction.UNIT_ID), (Integer) action
 		// .getValue(UnitAction.UNIT_STATE)));
 
-		
-		
 		button.addMouseListener(new MouseListener() {
 
 			@Override
@@ -881,13 +952,13 @@ public class MinerLampFrame extends JFrame {
 	public void refreshLampUnitsWithSelectRack(boolean flag) {
 
 		LampRack selectedLampPack = getSelectedLampPack();
-		System.out.println("selectedLampRack="+selectedLampPack);
+		System.out.println("selectedLampRack=" + selectedLampPack);
 		if (selectedLampPack == null) {
 			return;
 		}
-		GlobalData.selRackId=selectedLampPack.getId().intValue();
+		GlobalData.selRackId = selectedLampPack.getId().intValue();
 		if (flag) {
-		//	mainPanel.setSelectedIndex(0);
+			// mainPanel.setSelectedIndex(0);
 		}
 
 		unitsPanel.refreshUnit(selectedLampPack.getId());
@@ -997,8 +1068,11 @@ public class MinerLampFrame extends JFrame {
 			helpMenu.setEnabled(true);
 			addRackBtn.setEnabled(true);
 		} else {
-
-			loginButton.setVisible(true);
+			if (reachLimited == false) {
+				loginButton.setVisible(true);
+			} else {
+				loginButton.setVisible(false);
+			}
 			logoutButton.setVisible(false);
 			dataBackupButton.setEnabled(false);
 			lampStateButton.setEnabled(false);
@@ -1060,34 +1134,34 @@ public class MinerLampFrame extends JFrame {
 				action = StaffAction.ERROR_HAPPENS;
 				break;
 			case StaffState.LAMP_FULL:
-					action=StaffAction.CHARGING_OK;
+				action = StaffAction.CHARGING_OK;
 				/*
-				if (oldState == StaffState.LAMP_CHARGING) {
-					action = StaffAction.CHARGING_OK;
-				} else if (oldState == StaffState.STAFF_UNDERGROUND
-						|| oldState == StaffState.STAFF_DEFINED) {
-					action = StaffAction.BAT_ALREADY_FULL;
-				}
-				*/
+				 * if (oldState == StaffState.LAMP_CHARGING) { action =
+				 * StaffAction.CHARGING_OK; } else if (oldState ==
+				 * StaffState.STAFF_UNDERGROUND || oldState ==
+				 * StaffState.STAFF_DEFINED) { action =
+				 * StaffAction.BAT_ALREADY_FULL; }
+				 */
 				break;
 			case StaffState.LAMP_CHARGING:
-				if (oldState == StaffState.STAFF_UNDERGROUND||oldState == StaffState.STAFF_DEFINED||oldState==StaffState.LAMP_ERROR||oldState==StaffState.LAMP_OFFLINE) {
+				if (oldState == StaffState.STAFF_UNDERGROUND
+						|| oldState == StaffState.STAFF_DEFINED
+						|| oldState == StaffState.LAMP_ERROR
+						|| oldState == StaffState.LAMP_OFFLINE) {
 					action = StaffAction.PUT_ON;
 				} else if (oldState == StaffState.LAMP_FULL) {
-				//	action = StaffAction.FIRSTTIME_CHARGING;
+					// action = StaffAction.FIRSTTIME_CHARGING;
 				}
 				break;
 			case StaffState.STAFF_UNDERGROUND:
 				action = StaffAction.TAKE_AWAY;
-				/*if (oldState == StaffState.LAMP_CHARGING
-						|| oldState == StaffState.LAMP_FULL) {
-					action = StaffAction.TAKE_AWAY;
-				} else if (oldState == StaffState.LAMP_ERROR) {
-					action = StaffAction.ERROR_REPARED;
-				} else if (oldState == StaffState.LAMP_OFFLINE) {
-					action = StaffAction.ONLINE;
-				}
-				*/
+				/*
+				 * if (oldState == StaffState.LAMP_CHARGING || oldState ==
+				 * StaffState.LAMP_FULL) { action = StaffAction.TAKE_AWAY; }
+				 * else if (oldState == StaffState.LAMP_ERROR) { action =
+				 * StaffAction.ERROR_REPARED; } else if (oldState ==
+				 * StaffState.LAMP_OFFLINE) { action = StaffAction.ONLINE; }
+				 */
 				break;
 			case StaffState.LAMP_OFFLINE:
 				action = StaffAction.OFFLINE;
@@ -1147,8 +1221,8 @@ public class MinerLampFrame extends JFrame {
 			putValue(RACK_ID, rackUnit.getRackId());
 
 			putValue(UNIT_STATE, rackUnit.getState());
-			putValue(STAFF_NAME,rackUnit.getStaffName());
-			putValue(STAFF_DEPART,rackUnit.getStaffDepart());
+			putValue(STAFF_NAME, rackUnit.getStaffName());
+			putValue(STAFF_DEPART, rackUnit.getStaffDepart());
 			putValue(STAFF_WORKTYPE, rackUnit.getStaffWorkType());
 		}
 
@@ -1159,9 +1233,9 @@ public class MinerLampFrame extends JFrame {
 		public static final String UNIT_ID = "id";
 		public static final String RACK_ID = "rackId";
 		public static final String UNIT_STATE = "unitState";
-		public static final String STAFF_NAME="staffName";
-		public static final String STAFF_DEPART="staffDepart";
-		public static final String STAFF_WORKTYPE="staffWorkType";
+		public static final String STAFF_NAME = "staffName";
+		public static final String STAFF_DEPART = "staffDepart";
+		public static final String STAFF_WORKTYPE = "staffWorkType";
 	}
 
 	class UnitsPanel extends JPanel {
@@ -1267,6 +1341,7 @@ public class MinerLampFrame extends JFrame {
 					new GBC(0, 1).setFill(GridBagConstraints.HORIZONTAL)
 							.setWeight(100, 15));
 		}
+
 		public void refreshUnit(Long rackId) {
 			System.out.println("refreshRack rackId=" + rackId);
 			unitList = lampUnitDAO.getUnitsByRackId(rackId);
@@ -1274,9 +1349,9 @@ public class MinerLampFrame extends JFrame {
 					* SysConfiguration.rackColumn) {
 
 				for (int i = 0; i < unitsInfoPanel.getComponentCount(); i++) {
-					JPanel uPanel=(JPanel)unitsInfoPanel.getComponent(i);
+					JPanel uPanel = (JPanel) unitsInfoPanel.getComponent(i);
 					JButton button = (JButton) uPanel.getComponent(0);
-					JLabel label=(JLabel)uPanel.getComponent(1);
+					JLabel label = (JLabel) uPanel.getComponent(1);
 					LampUnit lampUnit = unitList.get(i);
 					int simualVal = 0;
 					if ((StaffState.rackPacket != null)
@@ -1286,8 +1361,9 @@ public class MinerLampFrame extends JFrame {
 								.intValue())[lampUnit.getLampNo().intValue()];
 
 					}
-					
-					setRefreshAction(new UnitAction(lampUnit, simualVal),label,button);
+
+					setRefreshAction(new UnitAction(lampUnit, simualVal),
+							label, button);
 				}
 
 			} else {
@@ -1305,6 +1381,7 @@ public class MinerLampFrame extends JFrame {
 				}
 			}
 		}
+
 		public void refreshUnit2(Long rackId) {
 			System.out.println("refreshRack rackId=" + rackId);
 			unitList = lampUnitDAO.getUnitsByRackId(rackId);
@@ -1345,11 +1422,18 @@ public class MinerLampFrame extends JFrame {
 			// unitsInfoPanel.revalidate();
 
 		}
-		private void setRefreshAction(UnitAction action,JLabel label,JButton button){
-			label.setText("<html><center><strong>"+action.getValue(UnitAction.STAFF_NAME)+"</strong></center><ceneter><strong>"+action.getValue(UnitAction.STAFF_DEPART)+"</strong></center></html>");
 
-			button.setAction(action);	
+		private void setRefreshAction(UnitAction action, JLabel label,
+				JButton button) {
+			label.setText("<html><center><strong>"
+					+ action.getValue(UnitAction.STAFF_NAME)
+					+ "</strong></center><ceneter><strong>"
+					+ action.getValue(UnitAction.STAFF_DEPART)
+					+ "</strong></center></html>");
+
+			button.setAction(action);
 		}
+
 		private ActionMap makeActionMap(LampUnit lampUnit) {
 			ActionMap actionMap = new ActionMap();
 
@@ -1444,7 +1528,7 @@ public class MinerLampFrame extends JFrame {
 					table.setModel(TableUtil.getModel(staffDAO
 							.queryStaffInfoModel(Staff.STAFF_MODEL_TYPE_1,
 									workId, name, professionId, departmentId,
-									rackId, lampNo), columnNames,dateColumnSet));
+									rackId, lampNo), columnNames, dateColumnSet));
 
 				}
 			}));
@@ -1484,7 +1568,7 @@ public class MinerLampFrame extends JFrame {
 		private JComboBox departmentCombo;
 		private StaffDAO staffDAO;
 		private String[] columnNames = { "工号", "姓名", "灯架号", "矿灯号", "工种", "部门" };
-		private HashSet<Integer> dateColumnSet=new HashSet<Integer>();
+		private HashSet<Integer> dateColumnSet = new HashSet<Integer>();
 		private JTable table;
 	}
 
@@ -1526,7 +1610,7 @@ public class MinerLampFrame extends JFrame {
 					Date endTime = endTimeTxt.getDate();
 					historyTable.setModel(TableUtil.getModel(chargingLogDAO
 							.queryHistoryLogModel(beginTime, endTime),
-							historyColumnNames,historyDateColumnSet));
+							historyColumnNames, historyDateColumnSet));
 
 				}
 			}));
@@ -1583,7 +1667,7 @@ public class MinerLampFrame extends JFrame {
 					resultPanel.setSelectedIndex(1);
 					singleDayTable.setModel(TableUtil.getModel(
 							chargingLogDAO.querySingleDayStatisticsModel(date),
-							singleDayColumnNames,singleDayDateColumnSet));
+							singleDayColumnNames, singleDayDateColumnSet));
 
 				}
 			}));
@@ -1602,7 +1686,7 @@ public class MinerLampFrame extends JFrame {
 							timeoutTable.setModel(TableUtil.getModel(
 									chargingLogDAO
 											.querySingleDayTimeoutModel(date),
-									timeoutColumnNames,timeoutDateColumnSet));
+									timeoutColumnNames, timeoutDateColumnSet));
 
 						}
 					}));
@@ -1665,13 +1749,14 @@ public class MinerLampFrame extends JFrame {
 		private JXDatePicker statisticsTimeTxt;
 		private String[] historyColumnNames = { "工号", "姓名", "灯架号", "矿灯号", "工种",
 				"队组", "时间", "事件" };
-		private HashSet<Integer> historyDateColumnSet=new HashSet<Integer>(Arrays.asList(6));
+		private HashSet<Integer> historyDateColumnSet = new HashSet<Integer>(
+				Arrays.asList(6));
 		private String[] singleDayColumnNames = { "灯架号", "0点班下井人数", "0点班未上井人数",
 				"8点班下井人数", "8点班未上井人数", "16点班下井人数", "16点班未上井人数" };
-		private HashSet<Integer> singleDayDateColumnSet=new HashSet<Integer>();
+		private HashSet<Integer> singleDayDateColumnSet = new HashSet<Integer>();
 		private String[] timeoutColumnNames = { "倒班次", "工号", "姓名", "灯架号",
 				"矿灯号", "工组" };
-		private HashSet<Integer> timeoutDateColumnSet=new HashSet<Integer>();
+		private HashSet<Integer> timeoutDateColumnSet = new HashSet<Integer>();
 		private JTable historyTable;
 		private JTable singleDayTable;
 		private JTable timeoutTable;
@@ -1753,7 +1838,7 @@ public class MinerLampFrame extends JFrame {
 					table.setModel(TableUtil.getModel(staffDAO
 							.queryStaffInfoModel(Staff.STAFF_MODEL_TYPE_2,
 									workId, name, professionId, departmentId,
-									rackId, lampNo), columnNames,dateColumnSet));
+									rackId, lampNo), columnNames, dateColumnSet));
 
 				}
 			}));
@@ -1793,7 +1878,8 @@ public class MinerLampFrame extends JFrame {
 		private JComboBox departmentCombo;
 		private String[] columnNames = { "队组", "工号", "姓名", "灯架号", "矿灯号", "工种",
 				"时间" };
-		private HashSet<Integer> dateColumnSet=new HashSet<Integer>(Arrays.asList(6));
+		private HashSet<Integer> dateColumnSet = new HashSet<Integer>(
+				Arrays.asList(6));
 		private JTable table;
 	}
 
@@ -1817,7 +1903,8 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 
 					table.setModel(TableUtil.getModel(
-							staffDAO.queryTimeoutDetailModel(), columnNames,dateColumnSet));
+							staffDAO.queryTimeoutDetailModel(), columnNames,
+							dateColumnSet));
 				}
 			}),
 					new GBC(0, 0).setWeight(100, 0)
@@ -1831,7 +1918,8 @@ public class MinerLampFrame extends JFrame {
 		private JComboBox fieldCombo;
 		private JTextField conditonTxt;
 		private String[] columnNames = { "班次", "姓名", "灯架号", "矿灯号", "队组", "下井时间" };
-		private HashSet<Integer> dateColumnSet=new HashSet<Integer>();
+		private HashSet<Integer> dateColumnSet = new HashSet<Integer>(
+				Arrays.asList(5));
 	}
 
 	class CommDebugPanel extends JPanel {
@@ -1947,13 +2035,14 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					Staff staff = staffDAO.queryByLampNoandRackId(lampNo,
 							rackId);
-					LampUnit lampUnit=lampUnitDAO.queryByLampNoandRackId(lampNo, rackId);
+					LampUnit lampUnit = lampUnitDAO.queryByLampNoandRackId(
+							lampNo, rackId);
 					if (staff != null) {
 						staffDAO.updateStaffChargingLastTime(staff, new Date());
 						lampUnitDAO
-								.updateLampUnitStateAndChargingCountIfNecessary(lampUnit,
-										StaffState.STAFF_UNDERGROUND, rackId,
-										lampNo);
+								.updateLampUnitStateAndChargingCountIfNecessary(
+										lampUnit, StaffState.STAFF_UNDERGROUND,
+										rackId, lampNo);
 						chargingLogDAO.save(staff, unitState,
 								StaffAction.TAKE_AWAY,
 								StaffState.STAFF_UNDERGROUND);
@@ -1969,7 +2058,8 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					Staff staff = staffDAO.queryByLampNoandRackId(lampNo,
 							rackId);
-					LampUnit lampUnit=lampUnitDAO.queryByLampNoandRackId(lampNo, rackId);
+					LampUnit lampUnit = lampUnitDAO.queryByLampNoandRackId(
+							lampNo, rackId);
 					if (staff != null) {
 						Integer action = null;
 						if (unitState == StaffState.STAFF_DEFINED) {
@@ -1978,9 +2068,9 @@ public class MinerLampFrame extends JFrame {
 							action = StaffAction.PUT_ON;
 						}
 						lampUnitDAO
-								.updateLampUnitStateAndChargingCountIfNecessary(lampUnit,
-										StaffState.LAMP_CHARGING, rackId,
-										lampNo);
+								.updateLampUnitStateAndChargingCountIfNecessary(
+										lampUnit, StaffState.LAMP_CHARGING,
+										rackId, lampNo);
 						chargingLogDAO.save(staff, unitState, action,
 								StaffState.LAMP_CHARGING);
 					}
@@ -1995,11 +2085,13 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					Staff staff = staffDAO.queryByLampNoandRackId(lampNo,
 							rackId);
-					LampUnit lampUnit=lampUnitDAO.queryByLampNoandRackId(lampNo, rackId);
+					LampUnit lampUnit = lampUnitDAO.queryByLampNoandRackId(
+							lampNo, rackId);
 					if (staff != null) {
 						lampUnitDAO
-								.updateLampUnitStateAndChargingCountIfNecessary(lampUnit,
-										StaffState.LAMP_FULL, rackId, lampNo);
+								.updateLampUnitStateAndChargingCountIfNecessary(
+										lampUnit, StaffState.LAMP_FULL, rackId,
+										lampNo);
 						chargingLogDAO.save(staff, unitState,
 								StaffAction.CHARGING_OK, StaffState.LAMP_FULL);
 						refreshLampUnits();
@@ -2014,12 +2106,13 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					Staff staff = staffDAO.queryByLampNoandRackId(lampNo,
 							rackId);
-					LampUnit lampUnit=lampUnitDAO.queryByLampNoandRackId(lampNo, rackId);
+					LampUnit lampUnit = lampUnitDAO.queryByLampNoandRackId(
+							lampNo, rackId);
 					if (staff != null) {
 						lampUnitDAO
-								.updateLampUnitStateAndChargingCountIfNecessary(lampUnit,
-										StaffState.LAMP_CHARGING, rackId,
-										lampNo);
+								.updateLampUnitStateAndChargingCountIfNecessary(
+										lampUnit, StaffState.LAMP_CHARGING,
+										rackId, lampNo);
 						chargingLogDAO
 								.save(staff, unitState, StaffAction.OVER_TIME,
 										StaffState.LAMP_CHARGING);
@@ -2035,11 +2128,13 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					Staff staff = staffDAO.queryByLampNoandRackId(lampNo,
 							rackId);
-					LampUnit lampUnit=lampUnitDAO.queryByLampNoandRackId(lampNo, rackId);
+					LampUnit lampUnit = lampUnitDAO.queryByLampNoandRackId(
+							lampNo, rackId);
 					if (staff != null) {
 						lampUnitDAO
-								.updateLampUnitStateAndChargingCountIfNecessary(lampUnit,
-										StaffState.LAMP_ERROR, rackId, lampNo);
+								.updateLampUnitStateAndChargingCountIfNecessary(
+										lampUnit, StaffState.LAMP_ERROR,
+										rackId, lampNo);
 						chargingLogDAO.save(staff, unitState,
 								StaffAction.ERROR_HAPPENS,
 								StaffState.LAMP_ERROR);
@@ -2055,12 +2150,13 @@ public class MinerLampFrame extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					Staff staff = staffDAO.queryByLampNoandRackId(lampNo,
 							rackId);
-					LampUnit lampUnit=lampUnitDAO.queryByLampNoandRackId(lampNo, rackId);
+					LampUnit lampUnit = lampUnitDAO.queryByLampNoandRackId(
+							lampNo, rackId);
 					if (staff != null) {
 						lampUnitDAO
-								.updateLampUnitStateAndChargingCountIfNecessary(lampUnit,
-										StaffState.STAFF_DEFINED, rackId,
-										lampNo);
+								.updateLampUnitStateAndChargingCountIfNecessary(
+										lampUnit, StaffState.STAFF_DEFINED,
+										rackId, lampNo);
 						chargingLogDAO.save(staff, unitState,
 								StaffAction.ERROR_REPARED,
 								StaffState.STAFF_DEFINED);
@@ -2095,61 +2191,52 @@ public class MinerLampFrame extends JFrame {
 		public void setUnitState(Integer state) {
 			this.unitState = state;
 			/*
-			if (state == StaffState.STAFF_UNDEFINED) {
-				editAction.setEnabled(false);
-				addAction.setEnabled(true);
-				delAction.setEnabled(false);
-				settingAction.setEnabled(false);
-
-				simuUndergroundAction.setEnabled(false);
-				simuChargingAction.setEnabled(false);
-				simuChargingFullAction.setEnabled(false);
-				simuErrorAction.setEnabled(false);
-				simuTimeoutAction.setEnabled(false);
-				simureparedAction.setEnabled(false);
-			} else {
-				editAction.setEnabled(true);
-				addAction.setEnabled(false);
-				delAction.setEnabled(true);
-				settingAction.setEnabled(true);
-				if (state == StaffState.STAFF_DEFINED) {
-					simuUndergroundAction.setEnabled(false);
-					simuChargingAction.setEnabled(true);
-					simuChargingFullAction.setEnabled(false);
-					simuErrorAction.setEnabled(true);
-					simuTimeoutAction.setEnabled(false);
-					simureparedAction.setEnabled(false);
-				} else if (state == StaffState.STAFF_UNDERGROUND) {
-					simuUndergroundAction.setEnabled(false);
-					simuChargingAction.setEnabled(true);
-					simuChargingFullAction.setEnabled(false);
-					simuErrorAction.setEnabled(true);
-					simuTimeoutAction.setEnabled(true);
-					simureparedAction.setEnabled(false);
-				} else if (state == StaffState.LAMP_CHARGING) {
-					simuUndergroundAction.setEnabled(true);
-					simuChargingAction.setEnabled(false);
-					simuChargingFullAction.setEnabled(true);
-					simuErrorAction.setEnabled(true);
-					simuTimeoutAction.setEnabled(false);
-					simureparedAction.setEnabled(false);
-				} else if (state == StaffState.LAMP_FULL) {
-					simuUndergroundAction.setEnabled(true);
-					simuChargingAction.setEnabled(false);
-					simuChargingFullAction.setEnabled(false);
-					simuErrorAction.setEnabled(true);
-					simuTimeoutAction.setEnabled(false);
-					simureparedAction.setEnabled(false);
-				} else if (state == StaffState.LAMP_ERROR) {
-					simuUndergroundAction.setEnabled(false);
-					simuChargingAction.setEnabled(false);
-					simuChargingFullAction.setEnabled(false);
-					simuErrorAction.setEnabled(false);
-					simuTimeoutAction.setEnabled(false);
-					simureparedAction.setEnabled(true);
-				}
-			}
-			*/
+			 * if (state == StaffState.STAFF_UNDEFINED) {
+			 * editAction.setEnabled(false); addAction.setEnabled(true);
+			 * delAction.setEnabled(false); settingAction.setEnabled(false);
+			 * 
+			 * simuUndergroundAction.setEnabled(false);
+			 * simuChargingAction.setEnabled(false);
+			 * simuChargingFullAction.setEnabled(false);
+			 * simuErrorAction.setEnabled(false);
+			 * simuTimeoutAction.setEnabled(false);
+			 * simureparedAction.setEnabled(false); } else {
+			 * editAction.setEnabled(true); addAction.setEnabled(false);
+			 * delAction.setEnabled(true); settingAction.setEnabled(true); if
+			 * (state == StaffState.STAFF_DEFINED) {
+			 * simuUndergroundAction.setEnabled(false);
+			 * simuChargingAction.setEnabled(true);
+			 * simuChargingFullAction.setEnabled(false);
+			 * simuErrorAction.setEnabled(true);
+			 * simuTimeoutAction.setEnabled(false);
+			 * simureparedAction.setEnabled(false); } else if (state ==
+			 * StaffState.STAFF_UNDERGROUND) {
+			 * simuUndergroundAction.setEnabled(false);
+			 * simuChargingAction.setEnabled(true);
+			 * simuChargingFullAction.setEnabled(false);
+			 * simuErrorAction.setEnabled(true);
+			 * simuTimeoutAction.setEnabled(true);
+			 * simureparedAction.setEnabled(false); } else if (state ==
+			 * StaffState.LAMP_CHARGING) {
+			 * simuUndergroundAction.setEnabled(true);
+			 * simuChargingAction.setEnabled(false);
+			 * simuChargingFullAction.setEnabled(true);
+			 * simuErrorAction.setEnabled(true);
+			 * simuTimeoutAction.setEnabled(false);
+			 * simureparedAction.setEnabled(false); } else if (state ==
+			 * StaffState.LAMP_FULL) { simuUndergroundAction.setEnabled(true);
+			 * simuChargingAction.setEnabled(false);
+			 * simuChargingFullAction.setEnabled(false);
+			 * simuErrorAction.setEnabled(true);
+			 * simuTimeoutAction.setEnabled(false);
+			 * simureparedAction.setEnabled(false); } else if (state ==
+			 * StaffState.LAMP_ERROR) { simuUndergroundAction.setEnabled(false);
+			 * simuChargingAction.setEnabled(false);
+			 * simuChargingFullAction.setEnabled(false);
+			 * simuErrorAction.setEnabled(false);
+			 * simuTimeoutAction.setEnabled(false);
+			 * simureparedAction.setEnabled(true); } }
+			 */
 		}
 
 		public Long getRackId() {
@@ -2222,11 +2309,11 @@ public class MinerLampFrame extends JFrame {
 										+ " rackId="
 										+ StaffState.rackPacket.getAddr()
 										+ " newState= " + newState);
-						/*		if (action == StaffAction.ERROR_REPARED
-										|| action == StaffAction.ONLINE) {
-									newState = StaffState.STAFF_DEFINED;
-								}
-						*/
+								/*
+								 * if (action == StaffAction.ERROR_REPARED ||
+								 * action == StaffAction.ONLINE) { newState =
+								 * StaffState.STAFF_DEFINED; }
+								 */
 								Staff staff = staffDAO.queryByLampNoandRackId(
 										new Long(i + 1),
 										new Long(StaffState.rackPacket
@@ -2237,7 +2324,8 @@ public class MinerLampFrame extends JFrame {
 								}
 								lampUnitDAO
 										.updateLampUnitStateAndChargingCountIfNecessary(
-												lampUnit,newState,
+												lampUnit,
+												newState,
 												new Long(StaffState.rackPacket
 														.getAddr()), new Long(
 														i + 1)); //
@@ -2248,7 +2336,7 @@ public class MinerLampFrame extends JFrame {
 						}
 						SerialComm.sysSerialComm.setRackRefreshed(false);
 						publish(0);
-						
+
 					} else {
 						if (SerialComm.sysSerialComm.commState == SerialComm.COMM_STATE_NOTHING) {
 							publish(1);
@@ -2306,7 +2394,7 @@ public class MinerLampFrame extends JFrame {
 	public static final int DEFAULT_HEIGHT = 768;
 	public static final String DEFALUT_LOOKANDFEEL = "com.sun.java.swing.plaf.windows.WindowsLookAndFeel";
 
-	private String titleExtra="";
+	private String titleExtra = "";
 	private JMenu sysMenu;
 	private JMenu lampMenu;
 	private JMenu staffMenu;
@@ -2355,6 +2443,7 @@ public class MinerLampFrame extends JFrame {
 	private InfoItemDAO infoItemDAO;
 	private ChargingLogDAO chargingLogDAO;
 
+	private boolean reachLimited = false;
 	private User currentUser;
 	private JLabel commStateLabel;
 	private JLabel commInfoLabel;
@@ -2362,6 +2451,8 @@ public class MinerLampFrame extends JFrame {
 	private JLabel emptyLabel;
 	private JLabel updateStateLabel;
 	private JLabel sysStateLabel;
+	
+	private Timer checkRegistTimer;
 
 	private BackgroundActivity backgroundActivity;
 	private JButton addRackBtn;

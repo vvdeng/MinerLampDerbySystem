@@ -41,6 +41,8 @@ public class LampUnitDAO {
 				hql += " where unit.chargingCounts>="
 						+ SysConfiguration.limitCount;
 			} else {
+				hql += " where unit.chargingTotalTime>="
+						+ SysConfiguration.limitTime*3600*1000;
 				// TODO充电时间累计超时
 
 			}

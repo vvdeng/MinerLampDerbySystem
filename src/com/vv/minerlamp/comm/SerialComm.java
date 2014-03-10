@@ -148,6 +148,9 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	}
 
 	public void write(byte[] bytes) {
+		if(!isSerialCommOk()){
+			return;
+		}
 		if (bytes == null) {
 			return;
 		}
@@ -170,6 +173,9 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	}
 
 	public void writeList(List<byte[]> bList) {
+		if(!isSerialCommOk()){
+			return;
+		}
 		commDataState=CommDataState.WAIT_DATA;
 		for (byte[] bs : bList) {
 			write(bs);

@@ -761,13 +761,13 @@ public class SysSettingDialog extends JDialog {
 			ButtonGroup buttonGroup = new ButtonGroup();
 			
 			countLimitRadioButton = new JRadioButton("限制使用次数");
-			countLimitRadioButton.setEnabled(false);
+		//	countLimitRadioButton.setEnabled(false);
 			countLimitRadioButton
 					.setSelected(SysConfiguration.isCountLimited == 0);
 			buttonGroup.add(countLimitRadioButton);
 
 			timeLimitRadioButton = new JRadioButton("限制使用时长");
-			timeLimitRadioButton.setEnabled(false);
+	//		timeLimitRadioButton.setEnabled(false);
 			timeLimitRadioButton
 					.setSelected(SysConfiguration.isCountLimited == 1);
 			buttonGroup.add(timeLimitRadioButton);
@@ -778,7 +778,7 @@ public class SysSettingDialog extends JDialog {
 			countLimitTxt.setPreferredSize(new Dimension(150, 20));
 			timeLimitTxt = new JFormattedTextField(
 					Util.getIntegerNumberFormat());
-			timeLimitTxt.setEnabled(false);
+		//	timeLimitTxt.setEnabled(false);
 			timeLimitTxt.setValue(SysConfiguration.limitTime);
 			timeLimitTxt.setPreferredSize(new Dimension(150, 20));
 

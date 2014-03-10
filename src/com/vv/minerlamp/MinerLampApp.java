@@ -9,7 +9,9 @@ import javax.swing.JOptionPane;
 
 import org.apache.commons.collections.functors.IfClosure;
 
+import com.vv.minerlamp.util.GlobalData;
 import com.vv.minerlamp.util.SysConfiguration;
+import com.vvdeng.minerlamp.security.WindowsSequenceService;
 
 public class MinerLampApp {
 	public static void main(String[] args) {
@@ -26,6 +28,7 @@ public class MinerLampApp {
 			public void run() {
 				try {
 					MinerLampFrame frame = new MinerLampFrame();
+					frame.postFrameShow();
 				} catch (Exception e) {
 					if (e instanceof PortInUseException) {
 						JOptionPane
@@ -55,5 +58,10 @@ public class MinerLampApp {
 				}
 			}
 		});
+	//WindowsSequenceService s = new WindowsSequenceService();
+	//	GlobalData.machineCode=new WindowsSequenceService().getSequence();
+		
+
+	//	System.out.println(GlobalData.machineCode);
 	}
 }

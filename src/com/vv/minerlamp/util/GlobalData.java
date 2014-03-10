@@ -14,4 +14,7 @@ public class GlobalData {
 	public static volatile boolean refreshSelRack=false;
 	public static volatile int selRackId=1;
 	public static HashMap<Integer,SysInf> sysInfoMap=new HashMap<Integer, SysInf>();
+	public  static   String machineCode=null;
+	public static final int MACHINE_CODE_LEN=39;
+
 }
