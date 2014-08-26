@@ -641,8 +641,9 @@ public class MinerLampFrame extends JFrame {
 			GlobalData.sysInfoMap.put(sysInf.getCat(), sysInf);
 		}
 		SysInf regist = GlobalData.sysInfoMap.get(SysInf.CAT_USER_REGIST);
-		if (regist.getVal().equals(SysInf.VAL_REGISTED)) { // ÒÑ¾­×¢²á
-			titleExtra = "×¢²á°æ";
+		if(true){
+		//if (regist.getVal().equals(SysInf.VAL_REGISTED)) { // ÒÑ¾­×¢²á
+			titleExtra = "²âÊÔ°æ";
 			return;
 		} else if (regist.getVal().equals(SysInf.VAL_TRY_COUNT)) {
 			Integer totalCount = GlobalData.sysInfoMap.get(
@@ -873,6 +874,7 @@ public class MinerLampFrame extends JFrame {
 	public JTree makeRackTree() {
 
 		final List<LampRack> lampRackList = lampRackDAO.getAll();
+		System.out.println("lampRackList size="+lampRackList.size());
 
 		// List nodeList = new ArrayList();
 		// DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode();
@@ -913,7 +915,7 @@ public class MinerLampFrame extends JFrame {
 		int mode = TreeSelectionModel.SINGLE_TREE_SELECTION;
 		rackTree.getSelectionModel().setSelectionMode(mode);
 		rackTree.putClientProperty("JTree.lineStyle", "Angled");
-		rackTree.setPreferredSize(new Dimension(180, 400));
+		rackTree.setMinimumSize(new Dimension(180, 400));
 		rackTree.addTreeSelectionListener(new TreeSelectionListener() {
 
 			@Override

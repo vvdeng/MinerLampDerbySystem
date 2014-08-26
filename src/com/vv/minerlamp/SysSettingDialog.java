@@ -79,7 +79,7 @@ public class SysSettingDialog extends JDialog {
 		nodeList.add(rackNode);
 		DefaultMutableTreeNode userNode = new DefaultMutableTreeNode("用户设置");
 		nodeList.add(userNode);
-		DefaultMutableTreeNode useNode = new DefaultMutableTreeNode("充电架使用设置");
+		DefaultMutableTreeNode useNode = new DefaultMutableTreeNode("矿灯超限设置");
 		nodeList.add(useNode);
 		DefaultMutableTreeNode positionNode = new DefaultMutableTreeNode("岗位设置");
 		nodeList.add(positionNode);
@@ -167,7 +167,7 @@ public class SysSettingDialog extends JDialog {
 					positionPanel.setVisible(false);
 					timeoutPanel.setVisible(false);
 
-				} else if (desc.equals("充电架使用设置")) {
+				} else if (desc.equals("矿灯超限设置")) {
 					commPanel.setVisible(false);
 					dbPanel.setVisible(false);
 					rackPanel.setVisible(false);
@@ -390,10 +390,14 @@ public class SysSettingDialog extends JDialog {
 							JOptionPane.YES_NO_OPTION);
 					if (selection == JOptionPane.YES_OPTION) {
 						Integer rackCount = new Integer(rackCountTxt.getText());
-
+						
 						Integer rackRow = new Integer(unitRowCountTxt.getText());
 						Integer rackColumn = new Integer(unitColumnCountTxt
 								.getText());
+						if(rackCount>SysConfiguration.maxRackCount){
+							JOptionPane.showMessageDialog(null, "为保证通讯稳定性，请确保充电架总数小于32台");
+							return;
+						}
 						PropertiesUtil.writeProperties(
 								SysConfiguration.FILE_PATH, "rackCount",
 								rackCount.toString());
@@ -750,7 +754,7 @@ public class SysSettingDialog extends JDialog {
 		public UsePanel() {
 			setLayout(new GridBagLayout());
 			JPanel panel = new JPanel();
-			panel.setBorder(BorderFactory.createTitledBorder("充电架使用设置"));
+			panel.setBorder(BorderFactory.createTitledBorder("矿灯超限设置"));
 			panel.setLayout(new GridBagLayout());
 			panel.add(new JLabel("充电次数限制："), new GBC(0, 1).setWeight(0, 0));
 			panel.add(new JLabel("使用时长限制："), new GBC(0, 2).setWeight(0, 0));

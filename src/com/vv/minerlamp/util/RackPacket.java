@@ -17,13 +17,18 @@ public class RackPacket {
 			
 			System.out.println("数据出错!!!!!!!!!!!!!!!!!!!!!!!!!!");
 		}
-		this.originData[addr] = new byte[SerialComm.DATA_UNITS_INFO_LENTTH];
-		data[addr] = new int[SerialComm.DATA_UNITS_INFO_LENTTH - 1];//索引从0开始，对应灯座1
+		System.out.println("RackPacket rackCount="+SysConfiguration.rackCount);
+	this.originData[addr] = new byte[SysConfiguration.rackRow*SysConfiguration.rackColumn + 1];
+		data[addr] = new int[SysConfiguration.rackRow*SysConfiguration.rackColumn ];//索引从0开始，对应灯座1
+	//	this.originData[addr] = new byte[SerialComm.DATA_UNITS_INFO_LENTTH];	
+	//	data[addr] = new int[SerialComm.DATA_UNITS_INFO_LENTTH - 1];//索引从0开始，对应灯座1
 		// System.arraycopy(ldata, 0, originData[addr], 0,
 		// originData[addr].length);
 		
 		this.originData[addr][0] = ldata[0];// 地址位没有加数据前缀，单独处理
-		for (int i = 1; i < SerialComm.DATA_UNITS_INFO_LENTTH; i++) {
+		for (int i = 1; i < (SysConfiguration.rackRow*SysConfiguration.rackColumn+ 1); i++) {
+		//	for (int i = 1; i < SerialComm.DATA_UNITS_INFO_LENTTH; i++) {
+
 			if ((ldata[i] & 0xf0) == SerialComm.DATA_PRE_UNIT_INFO) {
 				this.originData[addr][i] = (byte) (ldata[i] & 0x0f);
 			}

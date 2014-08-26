@@ -24,6 +24,7 @@ public class SysConfiguration {
 	public static Integer baudRate;
 	public static Integer delay;
 	public static Integer rackThreadSleepTime;
+	public static Integer maxRackCount=32;
 	public static Integer rackCount;
 	public static Integer rackRow;
 	public static Integer rackColumn;

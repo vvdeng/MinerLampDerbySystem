@@ -21,7 +21,7 @@ public class StaffDAO {
 		lampUnitDAO = new LampUnitDAO();
 	}
 
-	public Long save(Staff staff, Integer state, Integer action,
+	public void save(Staff staff, Integer state, Integer action,
 			String manufacturer) {
 
 		Session session = HibernateUtil.getSessionFactory().openSession();
@@ -32,9 +32,10 @@ public class StaffDAO {
 			Staff checkStaff;
 			if ((checkStaff = queryByLampNoandRackIdInCurrentSession(
 					staff.getLampNo(), staff.getRackId(), session)) != null) {
-				deleteStaff(checkStaff.getId());
+				deleteStaffInCurrentSession(checkStaff.getId(),session);
 			}
-			staffId = (Long) session.save(staff);
+		//	staffId = (Long) session.save(staff);
+			session.saveOrUpdate(staff);
 			lampUnitDAO.setLampStateInCurrentSession(staff.getRackId(),
 					staff.getLampNo(),staff, state, action, manufacturer, session);
 			transaction.commit();
@@ -44,7 +45,7 @@ public class StaffDAO {
 		} finally {
 			session.close();
 		}
-		return staffId;
+	//	return staffId;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -100,7 +101,12 @@ public class StaffDAO {
 			session.close();
 		}
 	}
-
+	public void deleteStaffInCurrentSession(Long staffId,Session session) {
+		
+		
+		session.createQuery("delete from Staff where id="+staffId).executeUpdate();
+			
+	}
 	public void deleteStaff(Long rackId, Long lampNo, Integer state,
 			Integer action) {
 		Session session = HibernateUtil.getSessionFactory().openSession();

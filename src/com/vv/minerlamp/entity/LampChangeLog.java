@@ -1,7 +1,5 @@
 package com.vv.minerlamp.entity;
 
-import java.util.Date;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -16,7 +14,7 @@ public class LampChangeLog {
 	private Long lampNo;
 	private Long workId;
 	private String staffName;
-	private Date changeTime;
+	private Long changeTime;
 	private Integer operation;
 
 	@Id    
@@ -57,10 +55,10 @@ public class LampChangeLog {
 		this.staffName = staffName;
 	}
 	@Column(name = "change_time") 
-	public Date getChangeTime() {
+	public Long getChangeTime() {
 		return changeTime;
 	}
-	public void setChangeTime(Date changeTime) {
+	public void setChangeTime(Long changeTime) {
 		this.changeTime = changeTime;
 	}
 	@Column(name = "operation") 

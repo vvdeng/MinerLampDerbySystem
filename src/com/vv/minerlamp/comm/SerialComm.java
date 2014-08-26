@@ -50,7 +50,7 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 	public static final int COMM_STATE_SINGLE_UNIT_INFO = 5;
 	public static final int COMM_STATE_REFRESH_DB = 6;
 	public static final int COMM_STATE_SEL_UNITS_INFO = 7;
-	public static final int DATA_UNITS_INFO_LENTTH = 101;
+//	public static final int DATA_UNITS_INFO_LENTTH = 101;
 	// TODO //命令号最高位更改为1 广播1000 0000 ；获取充电状态1010 00000；更新员工信息1100 0000；开小门(byte)
 	// 0xE0;
 	public static final byte CMD_SEND_ALL_LED_MESSAGES = (byte) 0x80;// 广播LED文字信息
@@ -234,7 +234,8 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 						buffers[bufIndex++] = (byte) c;
 
 						if (commDataState == CommDataState.WAIT_DATA
-								&& bufIndex == DATA_UNITS_INFO_LENTTH) {
+								&& bufIndex == (SysConfiguration.rackRow*SysConfiguration.rackColumn + 1)) {
+							//	&& bufIndex == DATA_UNITS_INFO_LENTTH) {
 							// replyTimeoutThreads[currentAddr].setFinished(true);
 							// if (replyTimeoutThreads[currentAddr].isAlive()) {
 							// replyTimeoutThreads[currentAddr].stop();
@@ -251,7 +252,9 @@ public class SerialComm implements /* Runnable, */SerialPortEventListener {
 						buffers[bufIndex++] = (byte) c;
 
 						if (commDataState == CommDataState.WAIT_DATA
-								&& bufIndex == DATA_UNITS_INFO_LENTTH) {
+								&& bufIndex == (SysConfiguration.rackRow*SysConfiguration.rackColumn + 1)) {
+							
+							//	&& bufIndex == DATA_UNITS_INFO_LENTTH) {
 							// replyTimeoutThreads[currentAddr].setFinished(true);
 							// if (replyTimeoutThreads[currentAddr].isAlive()) {
 							// replyTimeoutThreads[currentAddr].stop();

@@ -197,7 +197,7 @@ class StaffInfoDialog extends JDialog {
 		rightTopPanel.add(new JLabel("    部门："), new GBC(0, 3).setWeight(0, 0));
 		rightTopPanel.add(new JLabel("    班次："), new GBC(0, 4).setWeight(0, 0));
 		rightTopPanel.add(new JLabel("矿灯厂家："), new GBC(0, 5).setWeight(0, 0));
-		rackNoCombo = new JComboBox(Util.makeArray(20L).toArray());
+		rackNoCombo = new JComboBox(Util.makeArray(SysConfiguration.rackCount.longValue()).toArray());
 		selectCombo(rackNoCombo, rackId.toString());
 		rackNoCombo.setEnabled(false);
 		unitNoTxt = new JTextField();
@@ -269,7 +269,7 @@ class StaffInfoDialog extends JDialog {
 					lampChangeLog.setLampNo(lampNo);
 					lampChangeLog.setWorkId(staff.getWorkId());
 					lampChangeLog.setStaffName(staff.getName());
-					lampChangeLog.setChangeTime(new Date());
+					lampChangeLog.setChangeTime(new Date().getTime());
 					lampChangeLog.setOperation(LampChangeLog.OPERATION_CHANGE);
 					lampChangeLogDAO.save(lampChangeLog);
 					JOptionPane.showMessageDialog(StaffInfoDialog.this,

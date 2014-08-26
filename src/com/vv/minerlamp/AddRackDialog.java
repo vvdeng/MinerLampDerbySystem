@@ -64,6 +64,11 @@ class AddRackDialog extends JDialog {
 					// TODO: handle exception
 					ex.printStackTrace();
 					JOptionPane.showMessageDialog(null, "数据格式不争确");
+					return;
+				}
+				if((SysConfiguration.rackCount+addRackCount)>SysConfiguration.maxRackCount){
+					JOptionPane.showMessageDialog(null, "为保证通讯稳定性，请确保充电架数小于32台");
+					return;
 				}
 				Session session = HibernateUtil.getSessionFactory().openSession();
 				Transaction transaction = null;
